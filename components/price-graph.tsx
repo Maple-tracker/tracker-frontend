@@ -1,120 +1,126 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
-  Area,
-  AreaChart,
-} from "@/components/ui/chart"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+  Tooltip,
+} from "recharts";
 
 type PricePoint = {
-  date: string
-  price: number
-  volume: number
-}
+  date: string;
+  price: number;
+  volume: number;
+};
 
 type PriceGraphProps = {
-  priceHistory: PricePoint[]
-}
+  priceHistory: PricePoint[];
+};
 
 export function PriceGraph({ priceHistory }: PriceGraphProps) {
-  const [timeRange, setTimeRange] = useState<"7d" | "14d" | "30d" | "all">("30d")
+  const [timeRange, setTimeRange] = useState<"7d" | "14d" | "30d" | "all">(
+    "30d"
+  );
 
   // Filter data based on selected time range
   const filteredData = (() => {
-    const now = new Date()
-    let daysToShow = 30
+    const now = new Date();
+    let daysToShow = 30;
 
     switch (timeRange) {
       case "7d":
-        daysToShow = 7
-        break
+        daysToShow = 7;
+        break;
       case "14d":
-        daysToShow = 14
-        break
+        daysToShow = 14;
+        break;
       case "30d":
-        daysToShow = 30
-        break
+        daysToShow = 30;
+        break;
       case "all":
-        return priceHistory
+        return priceHistory;
     }
 
-    const cutoffDate = new Date()
-    cutoffDate.setDate(now.getDate() - daysToShow)
+    const cutoffDate = new Date();
+    cutoffDate.setDate(now.getDate() - daysToShow);
 
     return priceHistory.filter((point) => {
-      const pointDate = new Date(point.date)
-      return pointDate >= cutoffDate
-    })
-  })()
+      const pointDate = new Date(point.date);
+      return pointDate >= cutoffDate;
+    });
+  })();
 
   // Format large numbers for display
   const formatPrice = (price: number) => {
     if (price >= 1000000000) {
-      return `${(price / 1000000000).toFixed(1)}십억`
+      return `${(price / 1000000000).toFixed(1)}십억`;
     } else if (price >= 1000000) {
-      return `${(price / 1000000).toFixed(1)}백만`
+      return `${(price / 1000000).toFixed(1)}백만`;
     } else if (price >= 1000) {
-      return `${(price / 1000).toFixed(1)}천`
+      return `${(price / 1000).toFixed(1)}천`;
     }
-    return price.toString()
-  }
+    return price.toString();
+  };
 
   // Format date for display
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" })
-  }
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
+  };
+
+  // 차트 툴팁 커스텀 컴포넌트
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="custom-tooltip">
+          <p className="tooltip-date">{formatDate(label)}</p>
+          <p className="tooltip-price">{`${Number(
+            payload[0].value
+          ).toLocaleString()} 메소`}</p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-white">가격 기록</h2>
-        <div className="flex space-x-2">
-          <Button
-            variant={timeRange === "7d" ? "default" : "outline"}
-            size="sm"
+      <div className="chart-header">
+        <h2 className="chart-title">가격 기록</h2>
+        <div className="chart-buttons">
+          <button
+            className={`chart-button ${timeRange === "7d" ? "active" : ""}`}
             onClick={() => setTimeRange("7d")}
-            className={timeRange === "7d" ? "bg-purple-600 hover:bg-purple-700" : "text-purple-200 border-purple-800"}
           >
             7일
-          </Button>
-          <Button
-            variant={timeRange === "14d" ? "default" : "outline"}
-            size="sm"
+          </button>
+          <button
+            className={`chart-button ${timeRange === "14d" ? "active" : ""}`}
             onClick={() => setTimeRange("14d")}
-            className={timeRange === "14d" ? "bg-purple-600 hover:bg-purple-700" : "text-purple-200 border-purple-800"}
           >
             14일
-          </Button>
-          <Button
-            variant={timeRange === "30d" ? "default" : "outline"}
-            size="sm"
+          </button>
+          <button
+            className={`chart-button ${timeRange === "30d" ? "active" : ""}`}
             onClick={() => setTimeRange("30d")}
-            className={timeRange === "30d" ? "bg-purple-600 hover:bg-purple-700" : "text-purple-200 border-purple-800"}
           >
             30일
-          </Button>
-          <Button
-            variant={timeRange === "all" ? "default" : "outline"}
-            size="sm"
+          </button>
+          <button
+            className={`chart-button ${timeRange === "all" ? "active" : ""}`}
             onClick={() => setTimeRange("all")}
-            className={timeRange === "all" ? "bg-purple-600 hover:bg-purple-700" : "text-purple-200 border-purple-800"}
           >
             전체
-          </Button>
+          </button>
         </div>
       </div>
 
-      <div className="h-[400px] w-full">
-        <ChartContainer>
+      <div className="chart-container">
+        <ResponsiveContainer width="100%" height={400}>
           <AreaChart data={filteredData}>
             <defs>
               <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
@@ -123,17 +129,19 @@ export function PriceGraph({ priceHistory }: PriceGraphProps) {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#333" opacity={0.2} />
-            <XAxis dataKey="date" tickFormatter={formatDate} stroke="#9CA3AF" tick={{ fill: "#9CA3AF" }} />
-            <YAxis tickFormatter={formatPrice} stroke="#9CA3AF" tick={{ fill: "#9CA3AF" }} width={60} />
-            <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  className="bg-background/90 border border-purple-800 shadow-md"
-                  labelFormatter={(label) => formatDate(label as string)}
-                  itemFormatter={(value) => `${Number(value).toLocaleString()} 메소`}
-                />
-              }
+            <XAxis
+              dataKey="date"
+              tickFormatter={formatDate}
+              stroke="#9CA3AF"
+              tick={{ fill: "#9CA3AF" }}
             />
+            <YAxis
+              tickFormatter={formatPrice}
+              stroke="#9CA3AF"
+              tick={{ fill: "#9CA3AF" }}
+              width={60}
+            />
+            <Tooltip content={<CustomTooltip />} />
             <Area
               type="monotone"
               dataKey="price"
@@ -144,40 +152,50 @@ export function PriceGraph({ priceHistory }: PriceGraphProps) {
               activeDot={{ r: 6, fill: "#9333EA", stroke: "#fff" }}
             />
           </AreaChart>
-        </ChartContainer>
+        </ResponsiveContainer>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-background/20 p-3">
-          <div className="text-xs text-purple-200">시작 가격</div>
-          <div className="text-sm font-medium text-white">{filteredData[0]?.price.toLocaleString()} 메소</div>
-        </Card>
-        <Card className="bg-background/20 p-3">
-          <div className="text-xs text-purple-200">종료 가격</div>
-          <div className="text-sm font-medium text-white">
+      <div className="chart-stats">
+        <div className="stat-card">
+          <div className="stat-label">시작 가격</div>
+          <div className="stat-value">
+            {filteredData[0]?.price.toLocaleString()} 메소
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">종료 가격</div>
+          <div className="stat-value">
             {filteredData[filteredData.length - 1]?.price.toLocaleString()} 메소
           </div>
-        </Card>
-        <Card className="bg-background/20 p-3">
-          <div className="text-xs text-purple-200">가격 변동</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">가격 변동</div>
           <div
-            className={`text-sm font-medium ${
-              filteredData[filteredData.length - 1]?.price - filteredData[0]?.price >= 0
-                ? "text-green-400"
-                : "text-red-400"
+            className={`stat-value ${
+              filteredData[filteredData.length - 1]?.price -
+                filteredData[0]?.price >=
+              0
+                ? "positive"
+                : "negative"
             }`}
           >
-            {(filteredData[filteredData.length - 1]?.price - filteredData[0]?.price).toLocaleString()} 메소
+            {(
+              filteredData[filteredData.length - 1]?.price -
+              filteredData[0]?.price
+            ).toLocaleString()}{" "}
+            메소
           </div>
-        </Card>
-        <Card className="bg-background/20 p-3">
-          <div className="text-xs text-purple-200">평균 거래량</div>
-          <div className="text-sm font-medium text-white">
-            {Math.round(filteredData.reduce((sum, point) => sum + point.volume, 0) / filteredData.length)}
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">평균 거래량</div>
+          <div className="stat-value">
+            {Math.round(
+              filteredData.reduce((sum, point) => sum + point.volume, 0) /
+                filteredData.length
+            )}
           </div>
-        </Card>
+        </div>
       </div>
     </div>
-  )
+  );
 }
-
