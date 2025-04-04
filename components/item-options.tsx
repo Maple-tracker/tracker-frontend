@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { CustomSelect } from "@/components/custom-select";
 
 type ItemOptionsProps = {
   isActive: boolean;
@@ -28,6 +29,51 @@ export function ItemOptions({
     setNoDrag(false);
   }, [itemName]);
 
+  // 옵션 데이터 포맷팅
+  const starForceOptions = availableOptions?.starForce?.map(
+    (option: string) => ({
+      value: option,
+      label: option,
+    })
+  ) || [
+    { value: "0성", label: "0성" },
+    { value: "10성", label: "10성" },
+    { value: "15성", label: "15성" },
+    { value: "17성", label: "17성" },
+    { value: "20성", label: "20성" },
+    { value: "22성", label: "22성" },
+    { value: "25성", label: "25성" },
+  ];
+
+  const upperPotentialOptions = availableOptions?.upperPotential?.map(
+    (option: string) => ({
+      value: option,
+      label: option,
+    })
+  ) || [
+    { value: "3%", label: "3%" },
+    { value: "6%", label: "6%" },
+    { value: "9%", label: "9%" },
+    { value: "12%", label: "12%" },
+    { value: "15%", label: "15%" },
+    { value: "18%", label: "18%" },
+    { value: "21%", label: "21%" },
+    { value: "24%", label: "24%" },
+    { value: "27%", label: "27%" },
+    { value: "30%", label: "30%" },
+  ];
+
+  const lowerPotentialGradeOptions = availableOptions?.lowerPotentialGrade?.map(
+    (option: string) => ({
+      value: option,
+      label: option,
+    })
+  ) || [
+    { value: "레어", label: "레어" },
+    { value: "에픽", label: "에픽" },
+    { value: "유니크", label: "유니크" },
+    { value: "레전더리", label: "레전더리" },
+  ];
   return (
     <div className={`options-panel ${isActive ? "" : "options-disabled"}`}>
       {!isActive && (
@@ -43,102 +89,39 @@ export function ItemOptions({
           <label htmlFor="star-force" className="text-white block">
             스타포스
           </label>
-          <select
-            id="star-force"
+          <CustomSelect
+            options={starForceOptions}
             value={starForce}
-            onChange={(e) => setStarForce(e.target.value)}
-            className="select-input"
+            onChange={setStarForce}
+            placeholder="스타포스 선택"
             disabled={!isActive || isLoading}
-          >
-            <option value="" disabled>
-              스타포스 선택
-            </option>
-            {availableOptions?.starForce?.map(
-              (option: string, index: number) => (
-                <option key={index} value={option}>
-                  {option}
-                </option>
-              )
-            ) || (
-              <>
-                <option value="0성">0성</option>
-                <option value="10성">10성</option>
-                <option value="15성">15성</option>
-                <option value="17성">17성</option>
-                <option value="20성">20성</option>
-                <option value="22성">22성</option>
-                <option value="25성">25성</option>
-              </>
-            )}
-          </select>
+          />
         </div>
 
         <div className="space-y-2">
           <label htmlFor="upper-potential" className="text-white block">
             윗잠재능력 %
           </label>
-          <select
-            id="upper-potential"
+          <CustomSelect
+            options={upperPotentialOptions}
             value={upperPotential}
-            onChange={(e) => setUpperPotential(e.target.value)}
-            className="select-input"
+            onChange={setUpperPotential}
+            placeholder="윗잠재능력 % 선택"
             disabled={!isActive || isLoading}
-          >
-            <option value="" disabled>
-              윗잠재능력 % 선택
-            </option>
-            {availableOptions?.upperPotential?.map(
-              (option: string, index: number) => (
-                <option key={index} value={option}>
-                  {option}
-                </option>
-              )
-            ) || (
-              <>
-                <option value="3%">3%</option>
-                <option value="6%">6%</option>
-                <option value="9%">9%</option>
-                <option value="12%">12%</option>
-                <option value="15%">15%</option>
-                <option value="18%">18%</option>
-                <option value="21%">21%</option>
-                <option value="24%">24%</option>
-                <option value="27%">27%</option>
-                <option value="30%">30%</option>
-              </>
-            )}
-          </select>
+          />
         </div>
 
         <div className="space-y-2">
           <label htmlFor="lower-potential-grade" className="text-white block">
             아랫잠재능력 등급
           </label>
-          <select
-            id="lower-potential-grade"
+          <CustomSelect
+            options={lowerPotentialGradeOptions}
             value={lowerPotentialGrade}
-            onChange={(e) => setLowerPotentialGrade(e.target.value)}
-            className="select-input"
+            onChange={setLowerPotentialGrade}
+            placeholder="아랫잠재능력 등급 선택"
             disabled={!isActive || isLoading}
-          >
-            <option value="" disabled>
-              아랫잠재능력 등급 선택
-            </option>
-            {availableOptions?.lowerPotentialGrade?.map(
-              (option: string, index: number) => (
-                <option key={index} value={option}>
-                  {option}
-                </option>
-              )
-            ) || (
-              <>
-                <option value="레어">레어</option>
-                <option value="에픽">에픽</option>
-                <option value="유니크">유니크</option>
-                <option value="레전더리">레전더리</option>
-              </>
-            )}
-          </select>
+          />
         </div>
 
         <div className="flex items-center space-x-2 h-full">

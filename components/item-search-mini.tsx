@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Search, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { CustomSelect } from "@/components/custom-select";
 
 // 자동완성 API 호출 함수
 const fetchAutocompleteSuggestions = async (query: string) => {
@@ -127,6 +128,50 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
     }
   };
 
+  // 옵션 데이터 포맷팅
+  const starForceOptions = itemOptions?.starForce?.map((option: string) => ({
+    value: option,
+    label: option,
+  })) || [
+    { value: "0성", label: "0성" },
+    { value: "10성", label: "10성" },
+    { value: "15성", label: "15성" },
+    { value: "17성", label: "17성" },
+    { value: "20성", label: "20성" },
+    { value: "22성", label: "22성" },
+    { value: "25성", label: "25성" },
+  ];
+
+  const upperPotentialOptions = itemOptions?.upperPotential?.map(
+    (option: string) => ({
+      value: option,
+      label: option,
+    })
+  ) || [
+    { value: "3%", label: "3%" },
+    { value: "6%", label: "6%" },
+    { value: "9%", label: "9%" },
+    { value: "12%", label: "12%" },
+    { value: "15%", label: "15%" },
+    { value: "18%", label: "18%" },
+    { value: "21%", label: "21%" },
+    { value: "24%", label: "24%" },
+    { value: "27%", label: "27%" },
+    { value: "30%", label: "30%" },
+  ];
+
+  const lowerPotentialGradeOptions = itemOptions?.lowerPotentialGrade?.map(
+    (option: string) => ({
+      value: option,
+      label: option,
+    })
+  ) || [
+    { value: "레어", label: "레어" },
+    { value: "에픽", label: "에픽" },
+    { value: "유니크", label: "유니크" },
+    { value: "레전더리", label: "레전더리" },
+  ];
+
   return (
     <div className="mini-search-container">
       <div className="mini-search-input-wrapper">
@@ -161,19 +206,6 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
           className="mini-search-input"
         />
         <Search className="mini-search-icon" />
-        {showSuggestions && (
-          <div className="mini-suggestions-container">
-            {suggestions.map((suggestion, index) => (
-              <div
-                key={index}
-                className="mini-suggestion-item"
-                onClick={() => handleItemSelect(suggestion)}
-              >
-                {suggestion}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="mini-search-buttons">
@@ -194,6 +226,20 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
         </button>
       </div>
 
+      {showSuggestions && (
+        <div className="mini-suggestions-container">
+          {suggestions.map((suggestion, index) => (
+            <div
+              key={index}
+              className="mini-suggestion-item"
+              onClick={() => handleItemSelect(suggestion)}
+            >
+              {suggestion}
+            </div>
+          ))}
+        </div>
+      )}
+
       {showOptions && (
         <div className="mini-options-panel">
           <div className="mini-options-grid">
@@ -201,33 +247,13 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
               <label htmlFor="mini-star-force" className="mini-option-label">
                 스타포스
               </label>
-              <select
-                id="mini-star-force"
+              <CustomSelect
+                options={starForceOptions}
                 value={starForce}
-                onChange={(e) => setStarForce(e.target.value)}
-                className="mini-select-input"
-              >
-                <option value="" disabled>
-                  선택
-                </option>
-                {itemOptions?.starForce?.map(
-                  (option: string, index: number) => (
-                    <option key={index} value={option}>
-                      {option}
-                    </option>
-                  )
-                ) || (
-                  <>
-                    <option value="0성">0성</option>
-                    <option value="10성">10성</option>
-                    <option value="15성">15성</option>
-                    <option value="17성">17성</option>
-                    <option value="20성">20성</option>
-                    <option value="22성">22성</option>
-                    <option value="25성">25성</option>
-                  </>
-                )}
-              </select>
+                onChange={setStarForce}
+                placeholder="선택"
+                mini={true}
+              />
             </div>
 
             <div className="mini-option-item">
@@ -237,36 +263,13 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
               >
                 윗잠재능력 %
               </label>
-              <select
-                id="mini-upper-potential"
+              <CustomSelect
+                options={upperPotentialOptions}
                 value={upperPotential}
-                onChange={(e) => setUpperPotential(e.target.value)}
-                className="mini-select-input"
-              >
-                <option value="" disabled>
-                  선택
-                </option>
-                {itemOptions?.upperPotential?.map(
-                  (option: string, index: number) => (
-                    <option key={index} value={option}>
-                      {option}
-                    </option>
-                  )
-                ) || (
-                  <>
-                    <option value="3%">3%</option>
-                    <option value="6%">6%</option>
-                    <option value="9%">9%</option>
-                    <option value="12%">12%</option>
-                    <option value="15%">15%</option>
-                    <option value="18%">18%</option>
-                    <option value="21%">21%</option>
-                    <option value="24%">24%</option>
-                    <option value="27%">27%</option>
-                    <option value="30%">30%</option>
-                  </>
-                )}
-              </select>
+                onChange={setUpperPotential}
+                placeholder="선택"
+                mini={true}
+              />
             </div>
 
             <div className="mini-option-item">
@@ -276,30 +279,13 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
               >
                 아랫잠재능력 등급
               </label>
-              <select
-                id="mini-lower-potential"
+              <CustomSelect
+                options={lowerPotentialGradeOptions}
                 value={lowerPotentialGrade}
-                onChange={(e) => setLowerPotentialGrade(e.target.value)}
-                className="mini-select-input"
-              >
-                <option value="" disabled>
-                  선택
-                </option>
-                {itemOptions?.lowerPotentialGrade?.map(
-                  (option: string, index: number) => (
-                    <option key={index} value={option}>
-                      {option}
-                    </option>
-                  )
-                ) || (
-                  <>
-                    <option value="레어">레어</option>
-                    <option value="에픽">에픽</option>
-                    <option value="유니크">유니크</option>
-                    <option value="레전더리">레전더리</option>
-                  </>
-                )}
-              </select>
+                onChange={setLowerPotentialGrade}
+                placeholder="선택"
+                mini={true}
+              />
             </div>
 
             <div className="mini-option-item mini-checkbox-container">
