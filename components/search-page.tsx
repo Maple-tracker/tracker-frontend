@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, User, Package, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ItemOptions } from "@/components/item-options";
@@ -82,13 +82,16 @@ export function SearchPage() {
     null
   );
 
-  const fetchSuggestions = async (query: string) => {
-    if (query.length >= 2) {
-      const results = await fetchAutocompleteSuggestions(query, isItemSearch);
-      setSuggestions(results);
-      setShowSuggestions(results.length > 0);
-    }
-  };
+  const fetchSuggestions = useCallback(
+    async (query: string) => {
+      if (query.length >= 2 && isItemSearch) {
+        const results = await fetchAutocompleteSuggestions(query, isItemSearch);
+        setSuggestions(results);
+        setShowSuggestions(results.length > 0);
+      }
+    },
+    [isItemSearch]
+  );
 
   useEffect(() => {
     return () => {
@@ -123,10 +126,15 @@ export function SearchPage() {
     setIsLoadingOptions(false);
   };
 
-  const handleSearch = () => {
-    if (selectedItem && itemOptions) {
-      // 선택된 옵션 정보와 함께 상세 페이지로 이동
-      router.push(`/item/${encodeURIComponent(selectedItem)}`);
+  const handleSearch = (query: string = searchQuery) => {
+    if (query.trim()) {
+      if (isItemSearch) {
+        // 아이템 검색 모드
+        router.push(`/item/${encodeURIComponent(query)}`);
+      } else {
+        // 캐릭터 검색 모드
+        router.push(`/character/${encodeURIComponent(query)}`);
+      }
     }
   };
 
@@ -184,6 +192,13 @@ export function SearchPage() {
                 setSearchQuery(newValue);
                 setSelectedItem(null); // 입력 변경 시 선택된 아이템 초기화
 
+                // 아이디 검색 모드일 때는 자동완성 API 이용하지 않음
+                if (!isItemSearch) {
+                  setSuggestions([]);
+                  setShowSuggestions(false);
+                  return;
+                }
+
                 // 이전 디바운스 타이머 취소
                 if (debounceTimer) {
                   clearTimeout(debounceTimer);
@@ -204,10 +219,9 @@ export function SearchPage() {
 
                 // 0.5초 디바운스 설정
                 const timer = setTimeout(() => {
+                  setDebounceTimer(timer);
                   fetchSuggestions(newValue);
                 }, 500);
-
-                setDebounceTimer(timer);
               }}
               className="search-input"
             />
@@ -229,13 +243,31 @@ export function SearchPage() {
           <button
             className="search-button"
             onClick={() => {
-              if (searchQuery.trim().length >= 2) {
-                handleItemSelect(searchQuery.trim());
+              if (isItemSearch) {
+                // 아이템 검색 모드: 옵션 선택 버튼
+                if (searchQuery.trim().length >= 2) {
+                  handleItemSelect(searchQuery.trim());
+                }
+              } else {
+                // 캐릭터 검색 모드: 검색 버튼
+                if (searchQuery.trim()) {
+                  router.push(
+                    `/character/${encodeURIComponent(searchQuery.trim())}`
+                  );
+                }
               }
             }}
             type="button"
           >
-            <Filter className="mr-2 h-4 w-4" />
+            {isItemSearch ? (
+              <>
+                <Filter className="mr-2 h-4 w-4" />
+              </>
+            ) : (
+              <>
+                <Search className="mr-2 h-4 w-4" />
+              </>
+            )}
           </button>
         </div>
 
@@ -254,7 +286,7 @@ export function SearchPage() {
                 <div className="search-button-container">
                   <button
                     className="search-button-large"
-                    onClick={handleSearch}
+                    onClick={() => handleSearch()}
                     type="button"
                   >
                     <Search className="mr-2 h-5 w-5" />
