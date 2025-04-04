@@ -2,6 +2,7 @@ import { PriceGraph } from "@/components/price-graph";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { StarsBackground } from "@/components/stars-background";
+import { ItemSearchMini } from "@/components/item-search-mini";
 
 // Mock function to get item data
 async function getItemData(slug: string) {
@@ -49,11 +50,11 @@ export default async function ItemPage({
       <StarsBackground />
 
       <div className="container mx-auto px-4 py-8 relative z-10">
-        <div className="mb-6">
+        <div className="item-page-header">
           <Link href="/" className="back-button">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            검색으로 돌아가기
           </Link>
+          <ItemSearchMini currentItemName={itemData.name} />
         </div>
 
         <div className="item-details-card">

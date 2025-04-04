@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, User, Package } from "lucide-react";
+import { Search, User, Package, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ItemOptions } from "@/components/item-options";
 import { StarsBackground } from "@/components/stars-background";
@@ -35,12 +35,48 @@ const fetchAutocompleteSuggestions = async (query: string, isItem: boolean) => {
   }
 };
 
+// 아이템 옵션 정보 가져오기
+const fetchItemOptions = async (itemName: string) => {
+  try {
+    // 실제 API 호출 (현재는 목업 데이터 반환)
+    // const response = await fetch(`/api/item-options?name=${encodeURIComponent(itemName)}`);
+    // if (response.ok) {
+    //   return await response.json();
+    // }
+
+    // 목업 데이터 - 실제 API 연결 시 제거
+    return {
+      starForce: ["0성", "10성", "15성", "17성", "20성", "22성", "25성"],
+      upperPotential: [
+        "3%",
+        "6%",
+        "9%",
+        "12%",
+        "15%",
+        "18%",
+        "21%",
+        "24%",
+        "27%",
+        "30%",
+      ],
+      lowerPotentialGrade: ["레어", "에픽", "유니크", "레전더리"],
+      hasNoDrag: true,
+    };
+  } catch (error) {
+    console.error("아이템 옵션 정보 가져오기 실패:", error);
+    return null;
+  }
+};
+
 export function SearchPage() {
   const [isItemSearch, setIsItemSearch] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [optionsVisible, setOptionsVisible] = useState(true);
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [itemOptions, setItemOptions] = useState<any>(null);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const router = useRouter();
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(
     null
@@ -75,17 +111,23 @@ export function SearchPage() {
     }
   }, [isItemSearch]);
 
-  const handleSearch = (query: string = searchQuery) => {
-    if (query.trim()) {
-      // In a real app, we would encode the query properly
-      router.push(`/item/${encodeURIComponent(query)}`);
-    }
+  // 아이템 선택 시 옵션 정보 가져오기
+  const handleItemSelect = async (itemName: string) => {
+    setSelectedItem(itemName);
+    setSearchQuery(itemName);
+    setShowSuggestions(false);
+
+    setIsLoadingOptions(true);
+    const options = await fetchItemOptions(itemName);
+    setItemOptions(options);
+    setIsLoadingOptions(false);
   };
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setSearchQuery(suggestion);
-    setShowSuggestions(false);
-    handleSearch(suggestion);
+  const handleSearch = () => {
+    if (selectedItem && itemOptions) {
+      // 선택된 옵션 정보와 함께 상세 페이지로 이동
+      router.push(`/item/${encodeURIComponent(selectedItem)}`);
+    }
   };
 
   return (
@@ -140,6 +182,7 @@ export function SearchPage() {
               onChange={(e) => {
                 const newValue = e.target.value;
                 setSearchQuery(newValue);
+                setSelectedItem(null); // 입력 변경 시 선택된 아이템 초기화
 
                 // 이전 디바운스 타이머 취소
                 if (debounceTimer) {
@@ -168,34 +211,59 @@ export function SearchPage() {
               }}
               className="search-input"
             />
+            {showSuggestions && (
+              <div className="suggestions-container">
+                {suggestions.map((suggestion, index) => (
+                  <div
+                    key={index}
+                    className="suggestion-item"
+                    onClick={() => handleItemSelect(suggestion)}
+                  >
+                    {suggestion}
+                  </div>
+                ))}
+              </div>
+            )}
             <Search className="search-icon" />
           </div>
           <button
             className="search-button"
-            onClick={() => handleSearch()}
+            onClick={() => {
+              if (searchQuery.trim().length >= 2) {
+                handleItemSelect(searchQuery.trim());
+              }
+            }}
             type="button"
           >
-            검색
+            <Filter className="mr-2 h-4 w-4" />
           </button>
         </div>
 
-        {showSuggestions && (
-          <div className="suggestions-container">
-            {suggestions.map((suggestion, index) => (
-              <div
-                key={index}
-                className="suggestion-item"
-                onClick={() => handleSuggestionClick(suggestion)}
-              >
-                {suggestion}
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Animated options panel */}
         <div className={isItemSearch ? "slide-enter" : "slide-exit"}>
-          {optionsVisible && <ItemOptions />}
+          {optionsVisible && (
+            <div className="options-wrapper">
+              <ItemOptions
+                isActive={!!selectedItem}
+                itemName={selectedItem}
+                availableOptions={itemOptions}
+                isLoading={isLoadingOptions}
+              />
+
+              {selectedItem && itemOptions && (
+                <div className="search-button-container">
+                  <button
+                    className="search-button-large"
+                    onClick={handleSearch}
+                    type="button"
+                  >
+                    <Search className="mr-2 h-5 w-5" />
+                    검색
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
