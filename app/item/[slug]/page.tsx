@@ -40,9 +40,9 @@ async function getItemData(slug: string) {
 export default async function ItemPage({
   params,
 }: {
-  params: { slug: string };
+  params: { slug?: string };
 }) {
-  const itemData = await getItemData(params.slug);
+  const itemData = await getItemData(params.slug || "");
 
   return (
     <div className="magical-gradient">
