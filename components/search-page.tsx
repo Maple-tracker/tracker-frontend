@@ -12,7 +12,7 @@ const fetchAutocompleteSuggestions = async (query: string, isItem: boolean) => {
 
   try {
     const response = await fetch(
-      "http://localhost:8080/api/item_name/completion",
+      "http://3.34.183.166:8080/api/item_name/completion",
       {
         method: "POST",
         headers: {
