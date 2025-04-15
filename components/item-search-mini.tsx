@@ -45,21 +45,82 @@ const fetchItemOptions = async (itemName: string) => {
 
     // 목업 데이터 - 실제 API 연결 시 제거
     return {
-      starForce: ["0성", "10성", "15성", "17성", "20성", "22성", "25성"],
-      upperPotential: [
-        "3%",
-        "6%",
-        "9%",
-        "12%",
-        "15%",
-        "18%",
-        "21%",
-        "24%",
-        "27%",
-        "30%",
+      combinations: [
+        {
+          id: "opt1",
+          starForce: "0성",
+          upperPotential: "3%",
+          lowerPotentialGrade: "레어",
+          statType: "STR",
+          hasNoDrag: false,
+        },
+        {
+          id: "opt2",
+          starForce: "10성",
+          upperPotential: "6%",
+          lowerPotentialGrade: "에픽",
+          statType: "DEX",
+          hasNoDrag: false,
+        },
+        {
+          id: "opt3",
+          starForce: "15성",
+          upperPotential: "9%",
+          lowerPotentialGrade: "유니크",
+          statType: "INT",
+          hasNoDrag: true,
+        },
+        {
+          id: "opt4",
+          starForce: "17성",
+          upperPotential: "12%",
+          lowerPotentialGrade: "레전더리",
+          statType: "LUK",
+          hasNoDrag: true,
+        },
+        {
+          id: "opt5",
+          starForce: "20성",
+          upperPotential: "15%",
+          lowerPotentialGrade: "레어",
+          statType: "올스탯",
+          hasNoDrag: false,
+        },
+        {
+          id: "opt6",
+          starForce: "22성",
+          upperPotential: "18%",
+          lowerPotentialGrade: "에픽",
+          statType: "STR",
+          hasNoDrag: true,
+        },
+        {
+          id: "opt7",
+          starForce: "25성",
+          upperPotential: "21%",
+          lowerPotentialGrade: "유니크",
+          statType: "DEX",
+          hasNoDrag: false,
+        },
       ],
-      lowerPotentialGrade: ["레어", "에픽", "유니크", "레전더리"],
-      hasNoDrag: true,
+      availableOptions: {
+        starForce: ["0성", "10성", "15성", "17성", "20성", "22성", "25성"],
+        upperPotential: [
+          "3%",
+          "6%",
+          "9%",
+          "12%",
+          "15%",
+          "18%",
+          "21%",
+          "24%",
+          "27%",
+          "30%",
+        ],
+        lowerPotentialGrade: ["레어", "에픽", "유니크", "레전더리"],
+        statType: ["STR", "DEX", "INT", "LUK", "올스탯"],
+        hasNoDrag: true,
+      },
     };
   } catch (error) {
     console.error("아이템 옵션 정보 가져오기 실패:", error);
@@ -81,11 +142,20 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(
     null
   );
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
 
+  // 옵션 상태 관리
   const [starForce, setStarForce] = useState("");
   const [upperPotential, setUpperPotential] = useState("");
   const [lowerPotentialGrade, setLowerPotentialGrade] = useState("");
+  const [statType, setStatType] = useState("");
   const [noDrag, setNoDrag] = useState(false);
+
+  // 현재 선택 가능한 옵션 조합들
+  const [filteredCombinations, setFilteredCombinations] = useState<any[]>([]);
+
+  // 선택된 옵션 ID
+  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -93,6 +163,16 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
   useEffect(() => {
     setSearchQuery(currentItemName);
     setSelectedItem(currentItemName);
+
+    // 현재 아이템에 대한 옵션 정보 가져오기
+    if (currentItemName) {
+      fetchItemOptions(currentItemName).then((options) => {
+        setItemOptions(options);
+        if (options?.combinations) {
+          setFilteredCombinations(options.combinations);
+        }
+      });
+    }
   }, [currentItemName]);
 
   const fetchSuggestions = async (query: string) => {
@@ -116,61 +196,165 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
     setSelectedItem(itemName);
     setSearchQuery(itemName);
     setShowSuggestions(false);
+    setSelectedOptionId(null);
+
+    // 옵션 초기화
+    setStarForce("");
+    setUpperPotential("");
+    setLowerPotentialGrade("");
+    setStatType("");
+    setNoDrag(false);
 
     const options = await fetchItemOptions(itemName);
     setItemOptions(options);
+    if (options?.combinations) {
+      setFilteredCombinations(options.combinations);
+    }
+  };
+
+  // 옵션 선택 시 다른 옵션 필터링
+  type OptionField =
+    | "starForce"
+    | "upperPotential"
+    | "lowerPotentialGrade"
+    | "statType"
+    | "hasNoDrag";
+  type OptionValue<T extends OptionField> = T extends "hasNoDrag"
+    ? boolean
+    : string;
+
+  const updateAvailableOptions = <T extends OptionField>(
+    field: T,
+    value: OptionValue<T>
+  ) => {
+    if (!itemOptions?.combinations) return;
+
+    // 현재 선택된 옵션들
+    const currentSelections = {
+      starForce,
+      upperPotential,
+      lowerPotentialGrade,
+      statType,
+      hasNoDrag: noDrag,
+    };
+
+    // 새로 선택된 옵션 업데이트
+    currentSelections[field] = value as any; // 타입 캐스팅으로 오류 해결
+
+    // 선택된 옵션에 맞는 조합 필터링
+    const newFilteredCombinations = itemOptions.combinations.filter(
+      (combo: any) => {
+        return (
+          (!currentSelections.starForce ||
+            combo.starForce === currentSelections.starForce) &&
+          (!currentSelections.upperPotential ||
+            combo.upperPotential === currentSelections.upperPotential) &&
+          (!currentSelections.lowerPotentialGrade ||
+            combo.lowerPotentialGrade ===
+              currentSelections.lowerPotentialGrade) &&
+          (!currentSelections.statType ||
+            combo.statType === currentSelections.statType) &&
+          (currentSelections.hasNoDrag === false ||
+            combo.hasNoDrag === currentSelections.hasNoDrag)
+        );
+      }
+    );
+
+    setFilteredCombinations(newFilteredCombinations);
+
+    // 모든 옵션이 선택되었는지 확인
+    const allSelected =
+      currentSelections.starForce !== "" &&
+      currentSelections.upperPotential !== "" &&
+      currentSelections.lowerPotentialGrade !== "" &&
+      currentSelections.statType !== "";
+
+    // 정확히 하나의 조합만 남았거나 모든 옵션이 선택된 경우
+    if (newFilteredCombinations.length === 1 && allSelected) {
+      setSelectedOptionId(newFilteredCombinations[0].id);
+    } else {
+      setSelectedOptionId(null);
+    }
   };
 
   const handleSearch = () => {
     if (selectedItem) {
       // 선택된 옵션 정보와 함께 상세 페이지로 이동
-      router.push(`/item/${encodeURIComponent(selectedItem)}`);
+      if (selectedOptionId) {
+        router.push(
+          `/item/${encodeURIComponent(
+            selectedItem
+          )}?optionId=${selectedOptionId}`
+        );
+      } else {
+        router.push(`/item/${encodeURIComponent(selectedItem)}`);
+      }
     }
   };
 
+  // 현재 선택 가능한 스타포스 옵션 목록
+  const getAvailableStarForceOptions = () => {
+    if (!filteredCombinations.length) return [];
+
+    const options = [
+      ...new Set(filteredCombinations.map((combo) => combo.starForce)),
+    ];
+    return options.map((option) => ({
+      value: option,
+      label: option,
+    }));
+  };
+
+  // 현재 선택 가능한 윗잠재능력 옵션 목록
+  const getAvailableUpperPotentialOptions = () => {
+    if (!filteredCombinations.length) return [];
+
+    const options = [
+      ...new Set(filteredCombinations.map((combo) => combo.upperPotential)),
+    ];
+    return options.map((option) => ({
+      value: option,
+      label: option,
+    }));
+  };
+
+  // 현재 선택 가능한 아랫잠재능력 옵션 목록
+  const getAvailableLowerPotentialGradeOptions = () => {
+    if (!filteredCombinations.length) return [];
+
+    const options = [
+      ...new Set(
+        filteredCombinations.map((combo) => combo.lowerPotentialGrade)
+      ),
+    ];
+    return options.map((option) => ({
+      value: option,
+      label: option,
+    }));
+  };
+
+  // 현재 선택 가능한 스탯타입 옵션 목록
+  const getAvailableStatTypeOptions = () => {
+    if (!filteredCombinations.length) return [];
+    const options = [
+      ...new Set(filteredCombinations.map((combo) => combo.statType)),
+    ];
+    return options.map((option) => ({
+      value: option,
+      label: option,
+    }));
+  };
+
+  // 노작여부 선택 가능 여부
+  const isNoDragAvailable = () => {
+    return filteredCombinations.some((combo) => combo.hasNoDrag);
+  };
+
   // 옵션 데이터 포맷팅
-  const starForceOptions = itemOptions?.starForce?.map((option: string) => ({
-    value: option,
-    label: option,
-  })) || [
-    { value: "0성", label: "0성" },
-    { value: "10성", label: "10성" },
-    { value: "15성", label: "15성" },
-    { value: "17성", label: "17성" },
-    { value: "20성", label: "20성" },
-    { value: "22성", label: "22성" },
-    { value: "25성", label: "25성" },
-  ];
-
-  const upperPotentialOptions = itemOptions?.upperPotential?.map(
-    (option: string) => ({
-      value: option,
-      label: option,
-    })
-  ) || [
-    { value: "3%", label: "3%" },
-    { value: "6%", label: "6%" },
-    { value: "9%", label: "9%" },
-    { value: "12%", label: "12%" },
-    { value: "15%", label: "15%" },
-    { value: "18%", label: "18%" },
-    { value: "21%", label: "21%" },
-    { value: "24%", label: "24%" },
-    { value: "27%", label: "27%" },
-    { value: "30%", label: "30%" },
-  ];
-
-  const lowerPotentialGradeOptions = itemOptions?.lowerPotentialGrade?.map(
-    (option: string) => ({
-      value: option,
-      label: option,
-    })
-  ) || [
-    { value: "레어", label: "레어" },
-    { value: "에픽", label: "에픽" },
-    { value: "유니크", label: "유니크" },
-    { value: "레전더리", label: "레전더리" },
-  ];
+  const starForceOptions = getAvailableStarForceOptions();
+  const upperPotentialOptions = getAvailableUpperPotentialOptions();
+  const lowerPotentialGradeOptions = getAvailableLowerPotentialGradeOptions();
+  const statTypeOptions = getAvailableStatTypeOptions();
 
   return (
     <div className="mini-search-container">
@@ -183,6 +367,7 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
             const newValue = e.target.value;
             setSearchQuery(newValue);
             setSelectedItem(null); // 입력 변경 시 선택된 아이템 초기화
+            setSelectedOptionId(null); // 입력 변경 시 선택된 옵션 초기화
 
             // 이전 디바운스 타이머 취소
             if (debounceTimer) {
@@ -204,6 +389,30 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
             setDebounceTimer(timer);
           }}
           className="mini-search-input"
+          onKeyDown={(e) => {
+            // 자동완성 목록이 표시되지 않은 경우 처리하지 않음
+            if (!showSuggestions || suggestions.length === 0) return;
+
+            // 위 화살표 키
+            if (e.key === "ArrowUp") {
+              e.preventDefault(); // 커서가 맨 앞으로 이동하는 기본 동작 방지
+              setSelectedSuggestionIndex((prev) =>
+                prev <= 0 ? suggestions.length - 1 : prev - 1
+              );
+            }
+            // 아래 화살표 키
+            else if (e.key === "ArrowDown") {
+              e.preventDefault(); // 커서가 맨 뒤로 이동하는 기본 동작 방지
+              setSelectedSuggestionIndex((prev) =>
+                prev >= suggestions.length - 1 ? 0 : prev + 1
+              );
+            }
+            // Enter 키
+            else if (e.key === "Enter" && selectedSuggestionIndex >= 0) {
+              e.preventDefault(); // 폼 제출 방지
+              handleItemSelect(suggestions[selectedSuggestionIndex]);
+            }
+          }}
         />
         <Search className="mini-search-icon" />
       </div>
@@ -218,8 +427,15 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
         </button>
 
         <button
-          className="mini-search-button"
+          className={`mini-search-button ${
+            !selectedItem || (selectedItem && !selectedOptionId)
+              ? "opacity-50"
+              : ""
+          }`}
           onClick={handleSearch}
+          disabled={
+            !selectedItem || (selectedItem && !selectedOptionId) ? true : false
+          }
           type="button"
         >
           <Search className="h-4 w-4" />
@@ -231,7 +447,11 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
           {suggestions.map((suggestion, index) => (
             <div
               key={index}
-              className="mini-suggestion-item"
+              className={`mini-suggestion-item ${
+                index === selectedSuggestionIndex
+                  ? "suggestion-item-selected"
+                  : ""
+              }`}
               onClick={() => handleItemSelect(suggestion)}
             >
               {suggestion}
@@ -250,7 +470,10 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
               <CustomSelect
                 options={starForceOptions}
                 value={starForce}
-                onChange={setStarForce}
+                onChange={(value) => {
+                  setStarForce(value);
+                  updateAvailableOptions("starForce", value);
+                }}
                 placeholder="선택"
                 mini={true}
               />
@@ -266,7 +489,10 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
               <CustomSelect
                 options={upperPotentialOptions}
                 value={upperPotential}
-                onChange={setUpperPotential}
+                onChange={(value) => {
+                  setUpperPotential(value);
+                  updateAvailableOptions("upperPotential", value);
+                }}
                 placeholder="선택"
                 mini={true}
               />
@@ -282,7 +508,26 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
               <CustomSelect
                 options={lowerPotentialGradeOptions}
                 value={lowerPotentialGrade}
-                onChange={setLowerPotentialGrade}
+                onChange={(value) => {
+                  setLowerPotentialGrade(value);
+                  updateAvailableOptions("lowerPotentialGrade", value);
+                }}
+                placeholder="선택"
+                mini={true}
+              />
+            </div>
+
+            <div className="mini-option-item">
+              <label htmlFor="mini-stat-type" className="mini-option-label">
+                스탯타입
+              </label>
+              <CustomSelect
+                options={statTypeOptions}
+                value={statType}
+                onChange={(value) => {
+                  setStatType(value);
+                  updateAvailableOptions("statType", value);
+                }}
                 placeholder="선택"
                 mini={true}
               />
@@ -293,14 +538,17 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
                 type="checkbox"
                 id="mini-no-drag"
                 checked={noDrag}
-                onChange={(e) => setNoDrag(e.target.checked)}
+                onChange={(e) => {
+                  setNoDrag(e.target.checked);
+                  updateAvailableOptions("hasNoDrag", e.target.checked);
+                }}
                 className="mini-checkbox-input"
-                disabled={!itemOptions?.hasNoDrag}
+                disabled={!isNoDragAvailable()}
               />
               <label
                 htmlFor="mini-no-drag"
                 className={`mini-checkbox-label ${
-                  !itemOptions?.hasNoDrag ? "opacity-50" : ""
+                  !isNoDragAvailable() ? "opacity-50" : ""
                 }`}
               >
                 노작 여부
