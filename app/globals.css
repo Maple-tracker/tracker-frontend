@@ -356,6 +356,11 @@ body {
   background-color: rgba(20, 9, 51, 0.5);
 }
 
+/* 선택된 자동완성 항목 스타일 */
+.suggestion-item-selected {
+  background-color: rgba(60, 27, 153, 0.5);
+}
+
 .suggestions-container {
   position: absolute;
   z-index: 20;

@@ -81,6 +81,7 @@ export function SearchPage() {
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(
     null
   );
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
 
   const fetchSuggestions = useCallback(
     async (query: string) => {
@@ -138,6 +139,10 @@ export function SearchPage() {
     }
   };
 
+  useEffect(() => {
+    setSelectedSuggestionIndex(-1);
+  }, [showSuggestions]);
+
   return (
     <div className="magical-gradient">
       <div className="aurora-gradient animate-aurora"></div>
@@ -145,10 +150,11 @@ export function SearchPage() {
 
       <div className="content-container">
         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-          메이플 경매장 트래커
+          메이플마켓.today
         </h1>
         <p className="text-lg text-purple-200 mb-8">
-          아이템의 지난 시세를 여기서 편하게 찾아볼 수 있답니다!
+          오늘의 메이플스토리 경매장 시세를 찾아보세요!<br></br>
+          과거부터 오늘까지의 시세를 여기서 편하게 찾아볼 수 있답니다!
         </p>
 
         <div className="mb-6">
@@ -224,13 +230,41 @@ export function SearchPage() {
                 }, 500);
               }}
               className="search-input"
+              onKeyDown={(e) => {
+                // 자동완성 목록이 표시되지 않은 경우 처리하지 않음
+                if (!showSuggestions || suggestions.length === 0) return;
+
+                // 위 화살표 키
+                if (e.key === "ArrowUp") {
+                  e.preventDefault(); // 커서가 맨 앞으로 이동하는 기본 동작 방지
+                  setSelectedSuggestionIndex((prev) =>
+                    prev <= 0 ? suggestions.length - 1 : prev - 1
+                  );
+                }
+                // 아래 화살표 키
+                else if (e.key === "ArrowDown") {
+                  e.preventDefault(); // 커서가 맨 뒤로 이동하는 기본 동작 방지
+                  setSelectedSuggestionIndex((prev) =>
+                    prev >= suggestions.length - 1 ? 0 : prev + 1
+                  );
+                }
+                // Enter 키
+                else if (e.key === "Enter" && selectedSuggestionIndex >= 0) {
+                  e.preventDefault(); // 폼 제출 방지
+                  handleItemSelect(suggestions[selectedSuggestionIndex]);
+                }
+              }}
             />
             {showSuggestions && (
               <div className="suggestions-container">
                 {suggestions.map((suggestion, index) => (
                   <div
                     key={index}
-                    className="suggestion-item"
+                    className={`suggestion-item ${
+                      index === selectedSuggestionIndex
+                        ? "suggestion-item-selected"
+                        : ""
+                    }`}
                     onClick={() => handleItemSelect(suggestion)}
                   >
                     {suggestion}
