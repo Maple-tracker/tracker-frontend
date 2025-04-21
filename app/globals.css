@@ -505,6 +505,13 @@ body {
   color: white;
 }
 
+/* 기존 CSS 파일에 추가 */
+.tooltip-volume {
+  font-size: 0.75rem;
+  color: #a281ff;
+  margin-top: 0.25rem;
+}
+
 .content-container {
   position: relative;
   z-index: 10;
@@ -1006,7 +1013,7 @@ body {
   position: absolute;
   z-index: 10;
   width: 100%;
-  margin-top: 10rem;
+  top: 34px;
   background-color: #1a1a2e;
   border: 1px solid #3c1b99;
   border-radius: 0.375rem;

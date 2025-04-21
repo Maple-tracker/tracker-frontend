@@ -10,21 +10,25 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
-
-type PricePoint = {
-  date: string;
-  price: number;
-  volume: number;
-};
+import type { PriceDataPoint } from "@/types/price-api-types";
 
 type PriceGraphProps = {
-  priceHistory: PricePoint[];
+  priceHistory: PriceDataPoint[];
 };
 
 export function PriceGraph({ priceHistory }: PriceGraphProps) {
   const [timeRange, setTimeRange] = useState<"7d" | "14d" | "30d" | "all">(
     "30d"
   );
+
+  // 데이터가 없는 경우 처리
+  if (!priceHistory || priceHistory.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 bg-purple-900/20 rounded-lg">
+        <p className="text-purple-200">가격 데이터가 없습니다</p>
+      </div>
+    );
+  }
 
   // Filter data based on selected time range
   const filteredData = (() => {
@@ -81,6 +85,9 @@ export function PriceGraph({ priceHistory }: PriceGraphProps) {
           <p className="tooltip-price">{`${Number(
             payload[0].value
           ).toLocaleString()} 메소`}</p>
+          <p className="tooltip-volume">{`거래량: ${
+            payload[1]?.value || 0
+          }개`}</p>
         </div>
       );
     }

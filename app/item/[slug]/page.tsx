@@ -3,47 +3,61 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { StarsBackground } from "@/components/stars-background";
 import { ItemSearchMini } from "@/components/item-search-mini";
+import type { ItemPriceResponse } from "@/types/price-api-types";
 
-// Mock function to get item data
-async function getItemData(slug: string) {
-  // In a real app, this would be an API call
-  return {
-    id: slug,
-    name: decodeURIComponent(slug),
-    currentPrice: 1250000000,
-    averagePrice: 1200000000,
-    lowestPrice: 1100000000,
-    highestPrice: 1350000000,
-    priceChange: 50000000,
-    priceChangePercentage: 4.17,
-    lastUpdated: "2023-05-15T12:30:00Z",
-    // Generate 30 days of price data
-    priceHistory: Array.from({ length: 30 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (29 - i));
+// 아이템 데이터 가져오기
+async function getItemData(
+  slug: string,
+  optionId?: string
+): Promise<ItemPriceResponse> {
+  // 서버 컴포넌트에서 API 호출
+  const apiUrl = `
+    "dev.maplemarket.today/api/item-price/${slug}${optionId ? `?optionId=${optionId}` : ""}`;
 
-      // Create some price fluctuation
-      const basePrice = 1200000000;
-      const randomFactor =
-        Math.sin(i * 0.3) * 0.15 + Math.random() * 0.1 - 0.05;
-      const price = Math.round(basePrice * (1 + randomFactor));
+  try {
+    const response = await fetch(apiUrl, { next: { revalidate: 3600 } }); // 1시간마다 재검증
 
-      return {
-        date: date.toISOString().split("T")[0],
-        price,
-        volume: Math.floor(Math.random() * 20) + 5,
-      };
-    }),
-  };
+    if (!response.ok) {
+      throw new Error(`API 응답 오류: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("아이템 데이터 가져오기 실패:", error);
+
+    // 에러 발생 시 기본 데이터 반환
+    return {
+      item: {
+        id: slug,
+        name: decodeURIComponent(slug),
+        imageUrl: "/placeholder.svg?height=64&width=64",
+        category: "알 수 없음",
+        level: 0,
+        tradable: false,
+      },
+      option: null,
+      priceStats: {
+        currentPrice: 0,
+        averagePrice: 0,
+        lowestPrice: 0,
+        highestPrice: 0,
+        priceChange: 0,
+        priceChangePercentage: 0,
+        lastUpdated: new Date().toISOString(),
+      },
+      priceHistory: [],
+    };
+  }
 }
 
 export default async function ItemPage({
   params,
+  searchParams,
 }: {
-  params: Promise<{ slug: string }>;
+  params: { slug: string };
+  searchParams: { optionId?: string };
 }) {
-  const { slug } = await params;
-  const itemData = await getItemData(slug);
+  const itemData = await getItemData(params.slug, searchParams.optionId);
 
   return (
     <div className="magical-gradient">
@@ -54,33 +68,63 @@ export default async function ItemPage({
         <div className="item-page-header">
           <Link href="/" className="back-button">
             <ArrowLeft className="mr-2 h-4 w-4" />
+            검색으로 돌아가기
           </Link>
-          <ItemSearchMini currentItemName={itemData.name} />
+
+          <ItemSearchMini currentItemName={itemData.item.name} />
         </div>
 
         <div className="item-details-card">
           <div className="item-header">
-            <div>
-              <h1 className="item-title">{itemData.name}</h1>
-              <p className="item-update-time">
-                마지막 업데이트:{" "}
-                {new Date(itemData.lastUpdated).toLocaleString()}
-              </p>
+            <div className="flex items-start">
+              <div className="w-16 h-16 bg-purple-900/50 rounded-md flex items-center justify-center mr-4">
+                <img
+                  src={itemData.item.imageUrl || "/placeholder.svg"}
+                  alt={itemData.item.name}
+                  className="w-12 h-12 object-contain"
+                />
+              </div>
+              <div>
+                <h1 className="item-title">{itemData.item.name}</h1>
+                <p className="item-update-time">
+                  마지막 업데이트:{" "}
+                  {new Date(itemData.priceStats.lastUpdated).toLocaleString()}
+                </p>
+                {itemData.option && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
+                      {itemData.option.starForce}
+                    </span>
+                    <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
+                      {itemData.option.upperPotential}{" "}
+                      {itemData.option.statType}
+                    </span>
+                    <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
+                      {itemData.option.lowerPotentialGrade} 아랫잠재
+                    </span>
+                    {itemData.option.hasNoDrag && (
+                      <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
+                        노작
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="item-price">
               <div className="current-price">
-                {itemData.currentPrice.toLocaleString()} 메소
+                {itemData.priceStats.currentPrice.toLocaleString()} 메소
               </div>
               <div
                 className={`price-change ${
-                  itemData.priceChange >= 0 ? "positive" : "negative"
+                  itemData.priceStats.priceChange >= 0 ? "positive" : "negative"
                 }`}
               >
-                {itemData.priceChange >= 0 ? "+" : ""}
-                {itemData.priceChange.toLocaleString()} 메소 (
-                {itemData.priceChange >= 0 ? "+" : ""}
-                {itemData.priceChangePercentage.toFixed(2)}%)
+                {itemData.priceStats.priceChange >= 0 ? "+" : ""}
+                {itemData.priceStats.priceChange.toLocaleString()} 메소 (
+                {itemData.priceStats.priceChange >= 0 ? "+" : ""}
+                {itemData.priceStats.priceChangePercentage.toFixed(2)}%)
               </div>
             </div>
           </div>
@@ -89,19 +133,19 @@ export default async function ItemPage({
             <div className="price-summary-item">
               <div className="summary-label">평균 가격 (30일)</div>
               <div className="summary-value">
-                {itemData.averagePrice.toLocaleString()} 메소
+                {itemData.priceStats.averagePrice.toLocaleString()} 메소
               </div>
             </div>
             <div className="price-summary-item">
               <div className="summary-label">최저 가격 (30일)</div>
               <div className="summary-value">
-                {itemData.lowestPrice.toLocaleString()} 메소
+                {itemData.priceStats.lowestPrice.toLocaleString()} 메소
               </div>
             </div>
             <div className="price-summary-item">
               <div className="summary-label">최고 가격 (30일)</div>
               <div className="summary-value">
-                {itemData.highestPrice.toLocaleString()} 메소
+                {itemData.priceStats.highestPrice.toLocaleString()} 메소
               </div>
             </div>
           </div>
