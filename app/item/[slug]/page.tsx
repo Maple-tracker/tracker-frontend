@@ -4,6 +4,7 @@ import Link from "next/link";
 import { StarsBackground } from "@/components/stars-background";
 import { ItemSearchMini } from "@/components/item-search-mini";
 import type { ItemPriceResponse } from "@/types/price-api-types";
+import { use } from "react";
 
 // 아이템 데이터 가져오기
 async function getItemData(
@@ -12,7 +13,9 @@ async function getItemData(
 ): Promise<ItemPriceResponse> {
   // 서버 컴포넌트에서 API 호출
   const apiUrl = `
-    "dev.maplemarket.today/api/item-price/${slug}${optionId ? `?optionId=${optionId}` : ""}`;
+    "https://dev.maplemarket.today/api/item-price/${slug}${
+    optionId ? `?optionId=${optionId}` : ""
+  }`;
 
   try {
     const response = await fetch(apiUrl, { next: { revalidate: 3600 } }); // 1시간마다 재검증
@@ -50,14 +53,26 @@ async function getItemData(
   }
 }
 
-export default async function ItemPage({
-  params,
-  searchParams,
-}: {
-  params: { slug: string };
-  searchParams: { optionId?: string };
-}) {
-  const itemData = await getItemData(params.slug, searchParams.optionId);
+// Next.js 15 타입 정의에 맞게 수정
+type ItemPageProps = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
+
+export default function ItemPage({ params, searchParams }: ItemPageProps) {
+  // Promise에서 값 추출
+  const resolvedParams = use(params);
+  const resolvedSearchParams = use(searchParams);
+
+  const slug = resolvedParams.slug;
+  const optionId =
+    typeof resolvedSearchParams.optionId === "string"
+      ? resolvedSearchParams.optionId
+      : undefined;
+
+  // 비동기 데이터 가져오기
+  const itemDataPromise = getItemData(slug, optionId);
+  const itemData = use(itemDataPromise);
 
   return (
     <div className="magical-gradient">
