@@ -248,7 +248,9 @@ export function ItemOptions({
             value={starForce}
             onChange={handleStarForceChange}
             placeholder="스타포스 선택"
-            disabled={!isActive || isLoading || starForceOptions.length === 0}
+            disabled={
+              !isActive || isLoading || starForceOptions.length === 0 || noDrag
+            }
           />
         </div>
 
@@ -261,7 +263,9 @@ export function ItemOptions({
             value={statType}
             onChange={handleStatTypeChange}
             placeholder="스탯타입 선택"
-            disabled={!isActive || isLoading || statTypeOptions.length === 0}
+            disabled={
+              !isActive || isLoading || statTypeOptions.length === 0 || noDrag
+            }
           />
         </div>
 
@@ -275,7 +279,10 @@ export function ItemOptions({
             onChange={handleUpperPotentialChange}
             placeholder="윗잠재능력 % 선택"
             disabled={
-              !isActive || isLoading || upperPotentialOptions.length === 0
+              !isActive ||
+              isLoading ||
+              upperPotentialOptions.length === 0 ||
+              noDrag
             }
           />
         </div>
@@ -290,28 +297,37 @@ export function ItemOptions({
             onChange={handleLowerPotentialGradeChange}
             placeholder="아랫잠재능력 등급 선택"
             disabled={
-              !isActive || isLoading || lowerPotentialGradeOptions.length === 0
+              !isActive ||
+              isLoading ||
+              lowerPotentialGradeOptions.length === 0 ||
+              noDrag
             }
           />
         </div>
-
-        <div className="flex items-center space-x-2 h-full">
-          <input
-            type="checkbox"
-            id="no-drag"
-            checked={noDrag}
-            onChange={(e) => handleNoDragChange(e.target.checked)}
-            className="checkbox-input"
-            disabled={!isActive || isLoading || !isNoDragAvailable()}
-          />
-          <label
-            htmlFor="no-drag"
-            className={`text-white ${
-              !isActive || isLoading || !isNoDragAvailable() ? "opacity-50" : ""
-            }`}
-          >
-            노작 여부
-          </label>
+      </div>
+      <br></br>
+      <div className="mt-6">
+        <div className="flex items-center justify-center h-full">
+          <div className="flex flex-col items-center">
+            <label className="text-white mb-2">노작 여부</label>
+            <br></br>
+            <div className="toggle-switch-container">
+              <div
+                className={`toggle-switch ${noDrag ? "toggle-switch-on" : ""} ${
+                  !isActive || isLoading || !isNoDragAvailable()
+                    ? "toggle-switch-disabled"
+                    : ""
+                }`}
+                onClick={() => {
+                  if (isActive && !isLoading && isNoDragAvailable()) {
+                    handleNoDragChange(!noDrag);
+                  }
+                }}
+              >
+                <div className="toggle-switch-slider"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

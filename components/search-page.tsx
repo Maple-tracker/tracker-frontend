@@ -39,94 +39,94 @@ const fetchAutocompleteSuggestions = async (query: string, isItem: boolean) => {
 const fetchItemOptions = async (itemName: string) => {
   try {
     // 실제 API 호출 (현재는 목업 데이터 반환)
-    const response = await fetch(
-      `http://localhost:8080/api/item_name/options?name=${encodeURIComponent(
-        itemName
-      )}`
-    );
-    if (response.ok) {
-      return await response.json();
-    }
+    // const response = await fetch(
+    //   `http://localhost:8080/api/item_name/options?name=${encodeURIComponent(
+    //     itemName
+    //   )}`
+    // );
+    // if (response.ok) {
+    //   return await response.json();
+    // }
 
-    // 목업 데이터 - 실제 API 연결 시 제거
-    // return {
-    //   combinations: [
-    //     {
-    //       id: "opt1",
-    //       starForce: "0성",
-    //       upperPotential: "3%",
-    //       lowerPotentialGrade: "레어",
-    //       statType: "STR",
-    //       hasNoDrag: false,
-    //     },
-    //     {
-    //       id: "opt2",
-    //       starForce: "10성",
-    //       upperPotential: "6%",
-    //       lowerPotentialGrade: "에픽",
-    //       statType: "DEX",
-    //       hasNoDrag: false,
-    //     },
-    //     {
-    //       id: "opt3",
-    //       starForce: "15성",
-    //       upperPotential: "9%",
-    //       lowerPotentialGrade: "유니크",
-    //       statType: "INT",
-    //       hasNoDrag: true,
-    //     },
-    //     {
-    //       id: "opt4",
-    //       starForce: "17성",
-    //       upperPotential: "12%",
-    //       lowerPotentialGrade: "레전더리",
-    //       statType: "LUK",
-    //       hasNoDrag: true,
-    //     },
-    //     {
-    //       id: "opt5",
-    //       starForce: "20성",
-    //       upperPotential: "15%",
-    //       lowerPotentialGrade: "레어",
-    //       statType: "올스탯",
-    //       hasNoDrag: false,
-    //     },
-    //     {
-    //       id: "opt6",
-    //       starForce: "22성",
-    //       upperPotential: "18%",
-    //       lowerPotentialGrade: "에픽",
-    //       statType: "STR",
-    //       hasNoDrag: true,
-    //     },
-    //     {
-    //       id: "opt7",
-    //       starForce: "25성",
-    //       upperPotential: "21%",
-    //       lowerPotentialGrade: "유니크",
-    //       statType: "DEX",
-    //       hasNoDrag: false,
-    //     },
-    //   ],
-    //   availableOptions: {
-    //     starForce: ["0성", "10성", "15성", "17성", "20성", "22성", "25성"],
-    //     upperPotential: [
-    //       "3%",
-    //       "6%",
-    //       "9%",
-    //       "12%",
-    //       "15%",
-    //       "18%",
-    //       "21%",
-    //       "24%",
-    //       "27%",
-    //       "30%",
-    //     ],
-    //     lowerPotentialGrade: ["레어", "에픽", "유니크", "레전더리"],
-    //     statType: ["STR", "DEX", "INT", "LUK", "올스탯"],
-    //     hasNoDrag: true,
-    //   },
-    // };
+    //목업 데이터 - 실제 API 연결 시 제거
+    return {
+      combinations: [
+        {
+          id: "opt1",
+          starForce: "0성",
+          upperPotential: "3%",
+          lowerPotentialGrade: "레어",
+          statType: "STR",
+          hasNoDrag: false,
+        },
+        {
+          id: "opt2",
+          starForce: "10성",
+          upperPotential: "6%",
+          lowerPotentialGrade: "에픽",
+          statType: "DEX",
+          hasNoDrag: false,
+        },
+        {
+          id: "opt3",
+          starForce: "15성",
+          upperPotential: "9%",
+          lowerPotentialGrade: "유니크",
+          statType: "INT",
+          hasNoDrag: true,
+        },
+        {
+          id: "opt4",
+          starForce: "17성",
+          upperPotential: "12%",
+          lowerPotentialGrade: "레전더리",
+          statType: "LUK",
+          hasNoDrag: true,
+        },
+        {
+          id: "opt5",
+          starForce: "20성",
+          upperPotential: "15%",
+          lowerPotentialGrade: "레어",
+          statType: "올스탯",
+          hasNoDrag: false,
+        },
+        {
+          id: "opt6",
+          starForce: "22성",
+          upperPotential: "18%",
+          lowerPotentialGrade: "에픽",
+          statType: "STR",
+          hasNoDrag: true,
+        },
+        {
+          id: "opt7",
+          starForce: "25성",
+          upperPotential: "21%",
+          lowerPotentialGrade: "유니크",
+          statType: "DEX",
+          hasNoDrag: false,
+        },
+      ],
+      availableOptions: {
+        starForce: ["0성", "10성", "15성", "17성", "20성", "22성", "25성"],
+        upperPotential: [
+          "3%",
+          "6%",
+          "9%",
+          "12%",
+          "15%",
+          "18%",
+          "21%",
+          "24%",
+          "27%",
+          "30%",
+        ],
+        lowerPotentialGrade: ["레어", "에픽", "유니크", "레전더리"],
+        statType: ["STR", "DEX", "INT", "LUK", "올스탯"],
+        hasNoDrag: true,
+      },
+    };
   } catch (error) {
     console.error("아이템 옵션 정보 가져오기 실패:", error);
     return null;
