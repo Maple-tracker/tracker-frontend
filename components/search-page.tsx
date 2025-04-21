@@ -296,7 +296,7 @@ export function SearchPage() {
                 }
 
                 // 2글자 미만이면 자동완성 숨기기
-                if (newValue.length < 2) {
+                if (newValue.length < 1) {
                   setSuggestions([]);
                   setShowSuggestions(false);
                   return;
