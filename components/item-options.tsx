@@ -7,20 +7,19 @@ import { CustomSelect } from "@/components/custom-select";
 type OptionCombination = {
   id: string;
   starForce: string;
-  upperPotential: string;
-  lowerPotentialGrade: string;
+  potentialOption: string;
+  additionalPotentialOption: string;
   statType: string;
-  hasNoDrag: boolean;
+  enchantedFlag: boolean;
 };
 
 type ItemOptionsApiResponse = {
   combinations: OptionCombination[];
   availableOptions: {
     starForce: string[];
-    upperPotential: string[];
-    lowerPotentialGrade: string[];
+    potentialOption: string[];
+    additionalPotentialOption: string[];
     statType: string[];
-    hasNoDrag: boolean;
   };
 };
 
@@ -40,8 +39,8 @@ export function ItemOptions({
   onOptionSelect,
 }: ItemOptionsProps) {
   const [starForce, setStarForce] = useState("");
-  const [upperPotential, setUpperPotential] = useState("");
-  const [lowerPotentialGrade, setLowerPotentialGrade] = useState("");
+  const [potentialOption, setpotentialOption] = useState("");
+  const [additionalPotentialOption, setadditionalPotentialOption] = useState("");
   const [statType, setStatType] = useState("");
   const [noDrag, setNoDrag] = useState(false);
 
@@ -56,8 +55,8 @@ export function ItemOptions({
   // 아이템이 변경되면 옵션 초기화
   useEffect(() => {
     setStarForce("");
-    setUpperPotential("");
-    setLowerPotentialGrade("");
+    setpotentialOption("");
+    setadditionalPotentialOption("");
     setStatType("");
     setNoDrag(false);
     setSelectedOptionId(null);
@@ -70,11 +69,11 @@ export function ItemOptions({
   // 옵션 선택 시 다른 옵션 필터링
   type OptionField =
     | "starForce"
-    | "upperPotential"
-    | "lowerPotentialGrade"
+    | "potentialOption"
+    | "additionalPotentialOption"
     | "statType"
-    | "hasNoDrag";
-  type OptionValue<T extends OptionField> = T extends "hasNoDrag"
+    | "enchantedFlag";
+  type OptionValue<T extends OptionField> = T extends "enchantedFlag"
     ? boolean
     : string;
 
@@ -87,10 +86,10 @@ export function ItemOptions({
     // 현재 선택된 옵션들
     const currentSelections = {
       starForce,
-      upperPotential,
-      lowerPotentialGrade,
+      potentialOption,
+      additionalPotentialOption,
       statType,
-      hasNoDrag: noDrag,
+      enchantedFlag: noDrag,
     };
 
     // 새로 선택된 옵션 업데이트
@@ -102,15 +101,15 @@ export function ItemOptions({
         return (
           (!currentSelections.starForce ||
             combo.starForce === currentSelections.starForce) &&
-          (!currentSelections.upperPotential ||
-            combo.upperPotential === currentSelections.upperPotential) &&
-          (!currentSelections.lowerPotentialGrade ||
-            combo.lowerPotentialGrade ===
-              currentSelections.lowerPotentialGrade) &&
+          (!currentSelections.potentialOption ||
+            combo.potentialOption === currentSelections.potentialOption) &&
+          (!currentSelections.additionalPotentialOption ||
+            combo.additionalPotentialOption ===
+              currentSelections.additionalPotentialOption) &&
           (!currentSelections.statType ||
             combo.statType === currentSelections.statType) &&
-          (currentSelections.hasNoDrag === false ||
-            combo.hasNoDrag === currentSelections.hasNoDrag)
+          (currentSelections.enchantedFlag === false ||
+            combo.enchantedFlag === currentSelections.enchantedFlag)
         );
       }
     );
@@ -120,8 +119,8 @@ export function ItemOptions({
     // 모든 옵션이 선택되었는지 확인
     const allSelected =
       currentSelections.starForce !== "" &&
-      currentSelections.upperPotential !== "" &&
-      currentSelections.lowerPotentialGrade !== "" &&
+      currentSelections.potentialOption !== "" &&
+      currentSelections.additionalPotentialOption !== "" &&
       currentSelections.statType !== "";
 
     // 정확히 하나의 조합만 남았거나 모든 옵션이 선택된 경우
@@ -141,15 +140,15 @@ export function ItemOptions({
   };
 
   // 윗잠재능력 옵션 변경 핸들러
-  const handleUpperPotentialChange = (value: string) => {
-    setUpperPotential(value);
-    updateAvailableOptions("upperPotential", value);
+  const handlepotentialOptionChange = (value: string) => {
+    setpotentialOption(value);
+    updateAvailableOptions("potentialOption", value);
   };
 
   // 아랫잠재능력 옵션 변경 핸들러
-  const handleLowerPotentialGradeChange = (value: string) => {
-    setLowerPotentialGrade(value);
-    updateAvailableOptions("lowerPotentialGrade", value);
+  const handleadditionalPotentialOptionChange = (value: string) => {
+    setadditionalPotentialOption(value);
+    updateAvailableOptions("additionalPotentialOption", value);
   };
 
   // 스탯타입 옵션 변경 핸들러
@@ -161,7 +160,7 @@ export function ItemOptions({
   // 노작여부 옵션 변경 핸들러
   const handleNoDragChange = (checked: boolean) => {
     setNoDrag(checked);
-    updateAvailableOptions("hasNoDrag", checked);
+    updateAvailableOptions("enchantedFlag", checked);
   };
 
   // 현재 선택 가능한 스타포스 옵션 목록
@@ -178,11 +177,11 @@ export function ItemOptions({
   };
 
   // 현재 선택 가능한 윗잠재능력 옵션 목록
-  const getAvailableUpperPotentialOptions = () => {
+  const getAvailablepotentialOptionOptions = () => {
     if (!filteredCombinations.length) return [];
 
     const options = [
-      ...new Set(filteredCombinations.map((combo) => combo.upperPotential)),
+      ...new Set(filteredCombinations.map((combo) => combo.potentialOption)),
     ];
     return options.map((option) => ({
       value: option,
@@ -191,12 +190,12 @@ export function ItemOptions({
   };
 
   // 현재 선택 가능한 아랫잠재능력 옵션 목록
-  const getAvailableLowerPotentialGradeOptions = () => {
+  const getAvailableadditionalPotentialOptionOptions = () => {
     if (!filteredCombinations.length) return [];
 
     const options = [
       ...new Set(
-        filteredCombinations.map((combo) => combo.lowerPotentialGrade)
+        filteredCombinations.map((combo) => combo.additionalPotentialOption)
       ),
     ];
     return options.map((option) => ({
@@ -220,13 +219,13 @@ export function ItemOptions({
 
   // 노작여부 선택 가능 여부
   const isNoDragAvailable = () => {
-    return filteredCombinations.some((combo) => combo.hasNoDrag);
+    return filteredCombinations.some((combo) => combo.enchantedFlag);
   };
 
   // 옵션 데이터 포맷팅
   const starForceOptions = getAvailableStarForceOptions();
-  const upperPotentialOptions = getAvailableUpperPotentialOptions();
-  const lowerPotentialGradeOptions = getAvailableLowerPotentialGradeOptions();
+  const potentialOptionOptions = getAvailablepotentialOptionOptions();
+  const additionalPotentialOptionOptions = getAvailableadditionalPotentialOptionOptions();
   const statTypeOptions = getAvailableStatTypeOptions();
   return (
     <div className={`options-panel ${isActive ? "" : "options-disabled"}`}>
@@ -274,14 +273,14 @@ export function ItemOptions({
             윗잠재능력 %
           </label>
           <CustomSelect
-            options={upperPotentialOptions}
-            value={upperPotential}
-            onChange={handleUpperPotentialChange}
+            options={potentialOptionOptions}
+            value={potentialOption}
+            onChange={handlepotentialOptionChange}
             placeholder="윗잠재능력 % 선택"
             disabled={
               !isActive ||
               isLoading ||
-              upperPotentialOptions.length === 0 ||
+              potentialOptionOptions.length === 0 ||
               noDrag
             }
           />
@@ -292,14 +291,14 @@ export function ItemOptions({
             아랫잠재능력 등급
           </label>
           <CustomSelect
-            options={lowerPotentialGradeOptions}
-            value={lowerPotentialGrade}
-            onChange={handleLowerPotentialGradeChange}
+            options={additionalPotentialOptionOptions}
+            value={additionalPotentialOption}
+            onChange={handleadditionalPotentialOptionChange}
             placeholder="아랫잠재능력 등급 선택"
             disabled={
               !isActive ||
               isLoading ||
-              lowerPotentialGradeOptions.length === 0 ||
+              additionalPotentialOptionOptions.length === 0 ||
               noDrag
             }
           />
