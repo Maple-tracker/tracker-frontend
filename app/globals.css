@@ -1254,3 +1254,99 @@ body {
 .toggle-switch-on .toggle-switch-slider {
   transform: translateX(20px);
 }
+
+/* 토스트 스타일 */
+.toast-container {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 24rem;
+}
+
+.toast-item {
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+.toast-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  transition: width 0.1s linear;
+}
+
+/* 토스트 위치별 애니메이션 */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInTop {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInBottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 위치별 애니메이션 적용 */
+.toast-container[class*="top-right"] .toast-item {
+  animation: slideInRight 0.3s ease-out;
+}
+
+.toast-container[class*="top-left"] .toast-item {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.toast-container[class*="bottom-right"] .toast-item {
+  animation: slideInRight 0.3s ease-out;
+}
+
+.toast-container[class*="bottom-left"] .toast-item {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.toast-container[class*="top-center"] .toast-item {
+  animation: slideInTop 0.3s ease-out;
+}
+
+.toast-container[class*="bottom-center"] .toast-item {
+  animation: slideInBottom 0.3s ease-out;
+}

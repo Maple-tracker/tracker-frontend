@@ -1,5 +1,6 @@
 import type React from "react";
 import "@/app/globals.css";
+import { ToastProvider } from "@/contexts/toast-context";
 
 export const metadata = {
   title: "메이플스토리 경매장 트래커",
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
-        <main>{children}</main>
+        <ToastProvider>
+          <main>{children}</main>
+        </ToastProvider>
       </body>
     </html>
   );
