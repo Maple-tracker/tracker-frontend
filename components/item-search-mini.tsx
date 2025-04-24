@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Search, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CustomSelect } from "@/components/custom-select";
-import { useToast } from "@/contexts/toast-context";
 
 // 자동완성 API 호출 함수
 const fetchAutocompleteSuggestions = async (query: string) => {
@@ -39,106 +38,93 @@ const fetchAutocompleteSuggestions = async (query: string) => {
 const fetchItemOptions = async (itemName: string) => {
   try {
     // 실제 API 호출 (현재는 목업 데이터 반환)
-    const response = await fetch(
-      `/api/item-options?name=${encodeURIComponent(itemName)}`
-    );
-
-    // 404 오류 처리
-    if (response.status === 404) {
-      const errorData = await response.json();
-      throw new Error(
-        errorData.error || "해당 아이템 시세 데이터가 존재하지 않습니다."
-      );
-    }
-
-    if (!response.ok) {
-      throw new Error("아이템 옵션 정보를 가져오는 중 오류가 발생했습니다.");
-    }
-
-    return await response.json();
+    // const response = await fetch(`/api/item-options?name=${encodeURIComponent(itemName)}`);
+    // if (response.ok) {
+    //   return await response.json();
+    // }
 
     // 목업 데이터 - 실제 API 연결 시 제거
-    // return {
-    //   combinations: [
-    //     {
-    //       id: "opt1",
-    //       starForce: "0성",
-    //       upperPotential: "3%",
-    //       lowerPotentialGrade: "레어",
-    //       statType: "STR",
-    //       hasNoDrag: false,
-    //     },
-    //     {
-    //       id: "opt2",
-    //       starForce: "10성",
-    //       upperPotential: "6%",
-    //       lowerPotentialGrade: "에픽",
-    //       statType: "DEX",
-    //       hasNoDrag: false,
-    //     },
-    //     {
-    //       id: "opt3",
-    //       starForce: "15성",
-    //       upperPotential: "9%",
-    //       lowerPotentialGrade: "유니크",
-    //       statType: "INT",
-    //       hasNoDrag: true,
-    //     },
-    //     {
-    //       id: "opt4",
-    //       starForce: "17성",
-    //       upperPotential: "12%",
-    //       lowerPotentialGrade: "레전더리",
-    //       statType: "LUK",
-    //       hasNoDrag: true,
-    //     },
-    //     {
-    //       id: "opt5",
-    //       starForce: "20성",
-    //       upperPotential: "15%",
-    //       lowerPotentialGrade: "레어",
-    //       statType: "올스탯",
-    //       hasNoDrag: false,
-    //     },
-    //     {
-    //       id: "opt6",
-    //       starForce: "22성",
-    //       upperPotential: "18%",
-    //       lowerPotentialGrade: "에픽",
-    //       statType: "STR",
-    //       hasNoDrag: true,
-    //     },
-    //     {
-    //       id: "opt7",
-    //       starForce: "25성",
-    //       upperPotential: "21%",
-    //       lowerPotentialGrade: "유니크",
-    //       statType: "DEX",
-    //       hasNoDrag: false,
-    //     },
-    //   ],
-    //   availableOptions: {
-    //     starForce: ["0성", "10성", "15성", "17성", "20성", "22성", "25성"],
-    //     upperPotential: [
-    //       "3%",
-    //       "6%",
-    //       "9%",
-    //       "12%",
-    //       "15%",
-    //       "18%",
-    //       "21%",
-    //       "24%",
-    //       "27%",
-    //       "30%",
-    //     ],
-    //     lowerPotentialGrade: ["레어", "에픽", "유니크", "레전더리"],
-    //     statType: ["STR", "DEX", "INT", "LUK", "올스탯"],
-    //     hasNoDrag: true,
-    //   },
-    // };
+    return {
+      combinations: [
+        {
+          id: "opt1",
+          starForce: "0성",
+          upperPotential: "3%",
+          lowerPotentialGrade: "레어",
+          statType: "STR",
+          hasNoDrag: false,
+        },
+        {
+          id: "opt2",
+          starForce: "10성",
+          upperPotential: "6%",
+          lowerPotentialGrade: "에픽",
+          statType: "DEX",
+          hasNoDrag: false,
+        },
+        {
+          id: "opt3",
+          starForce: "15성",
+          upperPotential: "9%",
+          lowerPotentialGrade: "유니크",
+          statType: "INT",
+          hasNoDrag: true,
+        },
+        {
+          id: "opt4",
+          starForce: "17성",
+          upperPotential: "12%",
+          lowerPotentialGrade: "레전더리",
+          statType: "LUK",
+          hasNoDrag: true,
+        },
+        {
+          id: "opt5",
+          starForce: "20성",
+          upperPotential: "15%",
+          lowerPotentialGrade: "레어",
+          statType: "올스탯",
+          hasNoDrag: false,
+        },
+        {
+          id: "opt6",
+          starForce: "22성",
+          upperPotential: "18%",
+          lowerPotentialGrade: "에픽",
+          statType: "STR",
+          hasNoDrag: true,
+        },
+        {
+          id: "opt7",
+          starForce: "25성",
+          upperPotential: "21%",
+          lowerPotentialGrade: "유니크",
+          statType: "DEX",
+          hasNoDrag: false,
+        },
+      ],
+      availableOptions: {
+        starForce: ["0성", "10성", "15성", "17성", "20성", "22성", "25성"],
+        upperPotential: [
+          "3%",
+          "6%",
+          "9%",
+          "12%",
+          "15%",
+          "18%",
+          "21%",
+          "24%",
+          "27%",
+          "30%",
+        ],
+        lowerPotentialGrade: ["레어", "에픽", "유니크", "레전더리"],
+        statType: ["STR", "DEX", "INT", "LUK", "올스탯"],
+        hasNoDrag: true,
+      },
+    };
   } catch (error) {
     console.error("아이템 옵션 정보 가져오기 실패:", error);
-    throw error;
+    return null;
   }
 };
 
@@ -157,10 +143,6 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
     null
   );
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
-  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
-
-  // 토스트 훅 사용
-  const { showToast } = useToast();
 
   // 옵션 상태 관리
   const [starForce, setStarForce] = useState("");
@@ -184,27 +166,14 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
 
     // 현재 아이템에 대한 옵션 정보 가져오기
     if (currentItemName) {
-      setIsLoadingOptions(true);
-      fetchItemOptions(currentItemName)
-        .then((options) => {
-          setItemOptions(options);
-          if (options?.combinations) {
-            setFilteredCombinations(options.combinations);
-          }
-        })
-        .catch((error) => {
-          showToast(
-            error instanceof Error
-              ? error.message
-              : "아이템 옵션 정보를 가져오는 중 오류가 발생했습니다.",
-            "error"
-          );
-        })
-        .finally(() => {
-          setIsLoadingOptions(false);
-        });
+      fetchItemOptions(currentItemName).then((options) => {
+        setItemOptions(options);
+        if (options?.combinations) {
+          setFilteredCombinations(options.combinations);
+        }
+      });
     }
-  }, [currentItemName, showToast]);
+  }, [currentItemName]);
 
   const fetchSuggestions = async (query: string) => {
     if (query.length >= 2) {
@@ -224,6 +193,7 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
 
   // 아이템 선택 시 옵션 정보 가져오기
   const handleItemSelect = async (itemName: string) => {
+    setSelectedItem(itemName);
     setSearchQuery(itemName);
     setShowSuggestions(false);
     setSelectedOptionId(null);
@@ -234,28 +204,11 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
     setLowerPotentialGrade("");
     setStatType("");
     setNoDrag(false);
-    setIsLoadingOptions(true);
 
-    try {
-      const options = await fetchItemOptions(itemName);
-      setItemOptions(options);
-      setSelectedItem(itemName); // 성공 시에만 선택된 아이템 설정
-      if (options?.combinations) {
-        setFilteredCombinations(options.combinations);
-      }
-    } catch (error) {
-      // 오류 발생 시 토스트 메시지 표시
-      showToast(
-        error instanceof Error
-          ? error.message
-          : "아이템 옵션 정보를 가져오는 중 오류가 발생했습니다.",
-        "error"
-      );
-      setSelectedItem(null); // 오류 발생 시 선택된 아이템 초기화
-      setItemOptions(null);
-      setFilteredCombinations([]);
-    } finally {
-      setIsLoadingOptions(false);
+    const options = await fetchItemOptions(itemName);
+    setItemOptions(options);
+    if (options?.combinations) {
+      setFilteredCombinations(options.combinations);
     }
   };
 

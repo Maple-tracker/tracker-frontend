@@ -5,7 +5,6 @@ import { Search, User, Package, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ItemOptions } from "@/components/item-options";
 import { StarsBackground } from "@/components/stars-background";
-import { useToast } from "@/contexts/toast-context";
 
 // 자동완성 API 호출 함수
 const fetchAutocompleteSuggestions = async (query: string, isItem: boolean) => {
@@ -45,18 +44,9 @@ const fetchItemOptions = async (itemName: string) => {
         itemName
       )}`
     );
-
-    // 404 오류 처리
-    if (response.status === 404) {
-      const errorData = await response.json();
-      throw new Error("해당 아이템 시세 데이터가 존재하지 않습니다.");
+    if (response.ok) {
+      return await response.json();
     }
-
-    if (!response.ok) {
-      throw new Error("아이템 옵션 정보를 가져오는 중 오류가 발생했습니다.");
-    }
-
-    return await response.json();
 
     //목업 데이터 - 실제 API 연결 시 제거
     // return {
@@ -139,7 +129,7 @@ const fetchItemOptions = async (itemName: string) => {
     // };
   } catch (error) {
     console.error("아이템 옵션 정보 가져오기 실패:", error);
-    throw error;
+    return null;
   }
 };
 
@@ -158,9 +148,6 @@ export function SearchPage() {
   );
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
-
-  // 토스트 훅 사용
-  const { showToast } = useToast();
 
   const fetchSuggestions = useCallback(
     async (query: string) => {
@@ -196,28 +183,15 @@ export function SearchPage() {
 
   // 아이템 선택 시 옵션 정보 가져오기
   const handleItemSelect = async (itemName: string) => {
+    setSelectedItem(itemName);
     setSearchQuery(itemName);
     setShowSuggestions(false);
     setSelectedOptionId(null);
 
     setIsLoadingOptions(true);
-    try {
-      const options = await fetchItemOptions(itemName);
-      setItemOptions(options);
-      setSelectedItem(itemName); // 성공 시에만 선택된 아이템 설정
-    } catch (error) {
-      // 오류 발생 시 토스트 메시지 표시
-      showToast(
-        error instanceof Error
-          ? error.message
-          : "아이템 옵션 정보를 가져오는 중 오류가 발생했습니다.",
-        "error"
-      );
-      setSelectedItem(null); // 오류 발생 시 선택된 아이템 초기화
-      setItemOptions(null);
-    } finally {
-      setIsLoadingOptions(false);
-    }
+    const options = await fetchItemOptions(itemName);
+    setItemOptions(options);
+    setIsLoadingOptions(false);
   };
 
   // 옵션 선택 핸들러
@@ -242,8 +216,7 @@ export function SearchPage() {
     } else if (searchQuery.trim()) {
       // 캐릭터 검색 모드
       if (isItemSearch) {
-        // 아이템 검색 모드에서 선택된 아이템이 없는 경우 옵션 정보 가져오기 시도
-        handleItemSelect(searchQuery.trim());
+        router.push(`/api/market/trades/${encodeURIComponent(searchQuery.trim())}`);
       } else {
         router.push(`/api/character/${encodeURIComponent(searchQuery.trim())}`);
       }
