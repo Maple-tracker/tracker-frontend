@@ -205,18 +205,20 @@ export function SearchPage() {
       if (selectedOptionId) {
         // 옵션 ID가 있는 경우 포함하여 검색
         router.push(
-          `/api/market/trades/${encodeURIComponent(
+          `/item/${encodeURIComponent(
             selectedItem
           )}?optionId=${selectedOptionId}`
         );
       } else {
         // 옵션 ID가 없는 경우 기본 검색
-        router.push(`/api/market/trades/${encodeURIComponent(selectedItem)}`);
+        router.push(`/item/${encodeURIComponent(selectedItem)}`);
       }
     } else if (searchQuery.trim()) {
       // 캐릭터 검색 모드
       if (isItemSearch) {
-        router.push(`/api/market/trades/${encodeURIComponent(searchQuery.trim())}`);
+        router.push(
+          `/api/market/trades/${encodeURIComponent(searchQuery.trim())}`
+        );
       } else {
         router.push(`/api/character/${encodeURIComponent(searchQuery.trim())}`);
       }
