@@ -12,8 +12,8 @@ export type ItemBasicInfo = {
 export type ItemOption = {
   id: string;
   starForce: string;
-  upperPotential: string;
-  lowerPotentialGrade: string;
+  potentialOption: string;
+  additionalPotentialOption: string;
   statType: string;
   hasNoDrag: boolean;
 };

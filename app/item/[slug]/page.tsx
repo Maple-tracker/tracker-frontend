@@ -13,7 +13,7 @@ async function getItemData(
 ): Promise<ItemPriceResponse> {
   // 서버 컴포넌트에서 API 호출
   const apiUrl = `
-    "https://dev.maplemarket.today/api/item-price/${slug}${
+    "https://dev.maplemarket.today/api/item/price/${slug}${
     optionId ? `?optionId=${optionId}` : ""
   }`;
 
@@ -111,11 +111,11 @@ export default function ItemPage({ params, searchParams }: ItemPageProps) {
                       {itemData.option.starForce}
                     </span>
                     <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                      {itemData.option.upperPotential}{" "}
+                      {itemData.option.potentialOption}{" "}
                       {itemData.option.statType}
                     </span>
                     <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                      {itemData.option.lowerPotentialGrade} 아랫잠재
+                      {itemData.option.additionalPotentialOption} 아랫잠재
                     </span>
                     {itemData.option.hasNoDrag && (
                       <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
