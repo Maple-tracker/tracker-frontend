@@ -21,7 +21,9 @@ export type ItemOption = {
 // 가격 데이터 포인트 타입
 export type PriceDataPoint = {
   date: string; // ISO 형식 날짜 문자열 (YYYY-MM-DD)
-  price: number; // 메소 단위 가격
+  price: number; // 메소 단위 가격 (평균 가격)
+  highPrice: number; // 일일 최고가
+  lowPrice: number; // 일일 최저가
   volume: number; // 거래량
 };
 

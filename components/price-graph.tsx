@@ -1,15 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from "recharts";
+import { CandlestickChart } from "./candlestick-chart";
 import type { PriceDataPoint } from "@/types/price-api-types";
 
 type PriceGraphProps = {
@@ -20,6 +12,7 @@ export function PriceGraph({ priceHistory }: PriceGraphProps) {
   const [timeRange, setTimeRange] = useState<"7d" | "14d" | "30d" | "all">(
     "30d"
   );
+  const [hoveredData, setHoveredData] = useState<any>(null);
 
   // 데이터가 없는 경우 처리
   if (!priceHistory || priceHistory.length === 0) {
@@ -58,108 +51,60 @@ export function PriceGraph({ priceHistory }: PriceGraphProps) {
     });
   })();
 
-  // Format large numbers for display
-  const formatPrice = (price: number) => {
-    if (price >= 1000000000) {
-      return `${(price / 1000000000).toFixed(1)}십억`;
-    } else if (price >= 1000000) {
-      return `${(price / 1000000).toFixed(1)}백만`;
-    } else if (price >= 1000) {
-      return `${(price / 1000).toFixed(1)}천`;
-    }
-    return price.toString();
-  };
+  // 캔들 차트를 위한 데이터 가공 및 전일 대비 등락 계산
+  const processedData = filteredData.map((point, index, array) => {
+    // 이전 데이터와 비교하여 상승/하락 여부 결정
+    const isRising = index > 0 ? point.price >= array[index - 1].price : true;
 
-  // Format date for display
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" });
-  };
+    return {
+      ...point,
+      isRising,
+    };
+  });
 
-  // 차트 툴팁 커스텀 컴포넌트
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="custom-tooltip">
-          <p className="tooltip-date">{formatDate(label)}</p>
-          <p className="tooltip-price">{`${Number(
-            payload[0].value
-          ).toLocaleString()} 메소`}</p>
-          <p className="tooltip-volume">{`거래량: ${
-            payload[1]?.value || 0
-          }개`}</p>
-        </div>
-      );
-    }
-    return null;
+  // 호버 이벤트 핸들러
+  const handleHover = (dataPoint: any) => {
+    setHoveredData(dataPoint);
   };
 
   return (
     <div>
       <div className="chart-header">
         <h2 className="chart-title">가격 기록</h2>
-        <div className="chart-buttons">
-          <button
-            className={`chart-button ${timeRange === "7d" ? "active" : ""}`}
-            onClick={() => setTimeRange("7d")}
-          >
-            7일
-          </button>
-          <button
-            className={`chart-button ${timeRange === "14d" ? "active" : ""}`}
-            onClick={() => setTimeRange("14d")}
-          >
-            14일
-          </button>
-          <button
-            className={`chart-button ${timeRange === "30d" ? "active" : ""}`}
-            onClick={() => setTimeRange("30d")}
-          >
-            30일
-          </button>
-          <button
-            className={`chart-button ${timeRange === "all" ? "active" : ""}`}
-            onClick={() => setTimeRange("all")}
-          >
-            전체
-          </button>
+        <div className="chart-controls">
+          <div className="chart-buttons">
+            <button
+              className={`chart-button ${timeRange === "7d" ? "active" : ""}`}
+              onClick={() => setTimeRange("7d")}
+            >
+              7일
+            </button>
+            <button
+              className={`chart-button ${timeRange === "14d" ? "active" : ""}`}
+              onClick={() => setTimeRange("14d")}
+            >
+              14일
+            </button>
+            <button
+              className={`chart-button ${timeRange === "30d" ? "active" : ""}`}
+              onClick={() => setTimeRange("30d")}
+            >
+              30일
+            </button>
+            <button
+              className={`chart-button ${timeRange === "all" ? "active" : ""}`}
+              onClick={() => setTimeRange("all")}
+            >
+              전체
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="chart-container">
-        <ResponsiveContainer width="100%" height={400}>
-          <AreaChart data={filteredData}>
-            <defs>
-              <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#9333EA" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#9333EA" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#333" opacity={0.2} />
-            <XAxis
-              dataKey="date"
-              tickFormatter={formatDate}
-              stroke="#9CA3AF"
-              tick={{ fill: "#9CA3AF" }}
-            />
-            <YAxis
-              tickFormatter={formatPrice}
-              stroke="#9CA3AF"
-              tick={{ fill: "#9CA3AF" }}
-              width={60}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Area
-              type="monotone"
-              dataKey="price"
-              stroke="#9333EA"
-              strokeWidth={2}
-              fillOpacity={1}
-              fill="url(#colorPrice)"
-              activeDot={{ r: 6, fill: "#9333EA", stroke: "#fff" }}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        <div className="candlestick-chart-wrapper">
+          <CandlestickChart data={processedData} onHover={handleHover} />
+        </div>
       </div>
 
       <div className="chart-stats">
