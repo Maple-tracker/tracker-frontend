@@ -216,11 +216,10 @@ export function SearchPage() {
     } else if (searchQuery.trim()) {
       // 캐릭터 검색 모드
       if (isItemSearch) {
-        router.push(
-          `/api/market/trades/${encodeURIComponent(searchQuery.trim())}`
-        );
+        // 아이템 검색 모드에서 선택된 아이템이 없는 경우 옵션 정보 가져오기 시도
+        handleItemSelect(searchQuery.trim());
       } else {
-        router.push(`/api/character/${encodeURIComponent(searchQuery.trim())}`);
+        router.push(`/character/${encodeURIComponent(searchQuery.trim())}`);
       }
     }
   };

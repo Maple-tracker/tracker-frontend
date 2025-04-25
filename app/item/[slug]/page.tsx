@@ -12,8 +12,7 @@ async function getItemData(
   optionId?: string
 ): Promise<ItemPriceResponse> {
   // 서버 컴포넌트에서 API 호출
-  const apiUrl = `
-    "https://dev.maplemarket.today/api/item/price/${slug}${
+  const apiUrl = `https://dev.maplemarket.today/api/item/price/${slug}${
     optionId ? `?optionId=${optionId}` : ""
   }`;
 
