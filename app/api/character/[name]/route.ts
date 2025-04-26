@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 // 캐릭터 장비 아이템 타입 정의
 export type EquippedItem = {
@@ -24,7 +24,7 @@ export type CharacterData = {
   level: number;
   job: string;
   server: string;
-  guild?: string;
+  guild?: string | null;
   equippedItems: EquippedItem[];
   lastUpdated: string;
 };
@@ -346,14 +346,14 @@ function generateSampleCharacterData(name: string): CharacterData {
   };
 }
 
-// 올바른 매개변수 구조 분해 패턴을 사용합니다
+// Next.js 14.0.4에 맞는 라우트 핸들러 타입 정의
 export async function GET(
-  request: Request,
-  { params }: { params: { name: string } }
-) {
+  request: NextRequest,
+  context: { params: { name: string } }
+): Promise<NextResponse> {
   try {
     // URL에서 캐릭터 이름 추출
-    const characterName = decodeURIComponent(params.name);
+    const characterName = decodeURIComponent(context.params.name);
 
     // 실제 API 연동 시에는 여기서 외부 API 호출 또는 DB 쿼리 수행
     // 목업 데이터 생성
@@ -362,24 +362,16 @@ export async function GET(
     // 응답 지연 시뮬레이션 (실제 API 호출처럼 보이게)
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    return new NextResponse(JSON.stringify(characterData), {
+    return NextResponse.json(characterData, {
       status: 200,
-      headers: {
-        "Content-Type": "application/json",
-      },
     });
   } catch (error) {
     console.error("캐릭터 정보 API 오류:", error);
 
-    return new NextResponse(
-      JSON.stringify({
-        error: "캐릭터 정보를 가져오는 중 오류가 발생했습니다.",
-      }),
+    return NextResponse.json(
+      { error: "캐릭터 정보를 가져오는 중 오류가 발생했습니다." },
       {
         status: 500,
-        headers: {
-          "Content-Type": "application/json",
-        },
       }
     );
   }
