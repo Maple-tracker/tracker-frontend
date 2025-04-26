@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react";
 type Option = {
   value: string;
   label: string;
+  disabled?: boolean;
 };
 
 type CustomSelectProps = {
@@ -31,6 +32,9 @@ export function CustomSelect({
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const selectedOption = options.find((option) => option.value === value);
+
+  // 선택 가능한 옵션만 필터링
+  const availableOptions = options.filter((option) => !option.disabled);
 
   // 외부 클릭 감지
   useEffect(() => {
@@ -62,14 +66,15 @@ export function CustomSelect({
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setHighlightedIndex((prev) =>
-          prev < options.length - 1 ? prev + 1 : prev
+          prev < availableOptions.length - 1 ? prev + 1 : prev
         );
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : 0));
       } else if (e.key === "Enter" && highlightedIndex >= 0) {
         e.preventDefault();
-        onChange(options[highlightedIndex].value);
+        const option = availableOptions[highlightedIndex];
+        onChange(option.value);
         setIsOpen(false);
       }
     };
@@ -78,15 +83,17 @@ export function CustomSelect({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, highlightedIndex, options, onChange]);
+  }, [isOpen, highlightedIndex, availableOptions, onChange]);
 
   // 드롭다운이 열릴 때 현재 선택된 옵션으로 하이라이트 설정
   useEffect(() => {
     if (isOpen) {
-      const index = options.findIndex((option) => option.value === value);
+      const index = availableOptions.findIndex(
+        (option) => option.value === value
+      );
       setHighlightedIndex(index >= 0 ? index : -1);
     }
-  }, [isOpen, options, value]);
+  }, [isOpen, availableOptions, value]);
 
   return (
     <div
@@ -125,7 +132,7 @@ export function CustomSelect({
 
       {isOpen && !disabled && (
         <div className="custom-dropdown-options">
-          {options.map((option, index) => (
+          {availableOptions.map((option, index) => (
             <div
               key={option.value}
               className={`custom-dropdown-option ${
@@ -135,7 +142,9 @@ export function CustomSelect({
                 onChange(option.value);
                 setIsOpen(false);
               }}
-              onMouseEnter={() => setHighlightedIndex(index)}
+              onMouseEnter={() => {
+                setHighlightedIndex(index);
+              }}
             >
               {option.label}
             </div>

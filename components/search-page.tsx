@@ -296,7 +296,7 @@ export function SearchPage() {
                   clearTimeout(debounceTimer);
                 }
 
-                // 2글자 미만이면 자동완성 숨기기
+                // 1글자 미만이면 자동완성 숨기기
                 if (newValue.length < 1) {
                   setSuggestions([]);
                   setShowSuggestions(false);
@@ -309,11 +309,11 @@ export function SearchPage() {
                   return;
                 }
 
-                // 0.5초 디바운스 설정
+                // 0.1초 디바운스 설정
                 const timer = setTimeout(() => {
                   setDebounceTimer(timer);
                   fetchSuggestions(newValue);
-                }, 500);
+                }, 100);
               }}
               className="search-input"
               onKeyDown={(e) => {
@@ -381,7 +381,7 @@ export function SearchPage() {
           >
             {isItemSearch ? (
               <>
-                <Filter className="mr-2 h-4 w-4" />
+                옵션 검색
               </>
             ) : (
               <>

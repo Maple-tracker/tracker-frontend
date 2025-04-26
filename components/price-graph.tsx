@@ -148,6 +148,54 @@ export function PriceGraph({ priceHistory }: PriceGraphProps) {
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        .chart-controls {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 1rem;
+        }
+
+        .chart-toggle {
+          display: flex;
+          align-items: center;
+        }
+
+        .chart-toggle-label {
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+          user-select: none;
+        }
+
+        .chart-toggle-input {
+          margin-right: 0.5rem;
+          accent-color: #9333ea;
+          width: 1rem;
+          height: 1rem;
+        }
+
+        .chart-toggle-text {
+          color: #c1abff;
+          font-size: 0.875rem;
+        }
+
+        .candlestick-chart-wrapper {
+          width: 100%;
+          height: 400px;
+          position: relative;
+        }
+
+        .tooltip-change.positive {
+          color: #4ade80;
+        }
+
+        .tooltip-change.negative {
+          color: #f87171;
+        }
+      `}</style>
     </div>
   );
 }

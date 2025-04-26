@@ -4,7 +4,6 @@ import Link from "next/link";
 import { StarsBackground } from "@/components/stars-background";
 import { ItemSearchMini } from "@/components/item-search-mini";
 import type { ItemPriceResponse } from "@/types/price-api-types";
-import { use } from "react";
 
 // 아이템 데이터 가져오기
 async function getItemData(
@@ -12,18 +11,33 @@ async function getItemData(
   optionId?: string
 ): Promise<ItemPriceResponse> {
   // 서버 컴포넌트에서 API 호출
+  // 외부 API URL 구성 - 템플릿 리터럴 문법 수정
   const apiUrl = `https://dev.maplemarket.today/api/item/price/${slug}${
     optionId ? `?optionId=${optionId}` : ""
   }`;
 
   try {
-    const response = await fetch(apiUrl, { next: { revalidate: 3600 } }); // 1시간마다 재검증
+    console.log(`API 요청 URL: ${apiUrl}`); // 디버깅용 로그 추가
+
+    const response = await fetch(apiUrl, {
+      next: { revalidate: 3600 }, // 1시간마다 재검증
+      cache: "no-store", // 캐시 사용 안 함
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
 
     if (!response.ok) {
-      throw new Error(`API 응답 오류: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`API 응답 오류: ${response.status}`);
+      console.error(`응답 내용: ${errorText}`);
+      throw new Error(`API 응답 오류: ${response.status} - ${errorText}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log("API 응답 데이터:", data); // 디버깅용 로그 추가
+    return data;
   } catch (error) {
     console.error("아이템 데이터 가져오기 실패:", error);
 
@@ -54,24 +68,22 @@ async function getItemData(
 
 // Next.js 15 타입 정의에 맞게 수정
 type ItemPageProps = {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+  params: { slug: string };
+  searchParams: { [key: string]: string | string[] | undefined };
 };
 
-export default function ItemPage({ params, searchParams }: ItemPageProps) {
-  // Promise에서 값 추출
-  const resolvedParams = use(params);
-  const resolvedSearchParams = use(searchParams);
-
-  const slug = resolvedParams.slug;
+export default async function ItemPage({
+  params,
+  searchParams,
+}: ItemPageProps) {
+  const slug = params.slug;
   const optionId =
-    typeof resolvedSearchParams.optionId === "string"
-      ? resolvedSearchParams.optionId
+    typeof searchParams.optionId === "string"
+      ? searchParams.optionId
       : undefined;
 
   // 비동기 데이터 가져오기
-  const itemDataPromise = getItemData(slug, optionId);
-  const itemData = use(itemDataPromise);
+  const itemData = await getItemData(slug, optionId);
 
   return (
     <div className="magical-gradient">
@@ -114,11 +126,11 @@ export default function ItemPage({ params, searchParams }: ItemPageProps) {
                       {itemData.option.statType}
                     </span>
                     <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                      {itemData.option.additionalPotentialOption} 아랫잠재
+                      {itemData.option.additionalPotentialOption} 에디셔널
                     </span>
-                    {itemData.option.hasNoDrag && (
+                    {itemData.option.enchantedFlag && (
                       <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                        노작
+                        인챈트
                       </span>
                     )}
                   </div>

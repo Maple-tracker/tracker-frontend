@@ -12,10 +12,10 @@ export type ItemBasicInfo = {
 export type ItemOption = {
   id: string;
   starForce: string;
-  potentialOption: string;
-  additionalPotentialOption: string;
+  potentialOption: string; // 변경
+  additionalPotentialOption: string; // 변경
   statType: string;
-  hasNoDrag: boolean;
+  enchantedFlag: boolean; // 변경
 };
 
 // 가격 데이터 포인트 타입
