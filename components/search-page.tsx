@@ -5,6 +5,7 @@ import { Search, User, Package, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ItemOptions } from "@/components/item-options";
 import { StarsBackground } from "@/components/stars-background";
+import { CharacterSearchResults } from "@/components/character-search-results";
 
 // 자동완성 API 호출 함수
 const fetchAutocompleteSuggestions = async (query: string, isItem: boolean) => {
@@ -140,6 +141,9 @@ export function SearchPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [optionsVisible, setOptionsVisible] = useState(true);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(
+    null
+  );
   const [itemOptions, setItemOptions] = useState<any>(null);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const router = useRouter();
@@ -170,6 +174,13 @@ export function SearchPage() {
 
   // Handle toggle change with animation
   useEffect(() => {
+    // 검색 모드 변경 시 상태 초기화
+    setSearchQuery("");
+    setSelectedItem(null);
+    setSelectedCharacter(null);
+    setSelectedOptionId(null);
+    setSuggestions([]);
+    setShowSuggestions(false);
     if (isItemSearch) {
       setOptionsVisible(true);
     } else {
@@ -213,13 +224,10 @@ export function SearchPage() {
         // 옵션 ID가 없는 경우 기본 검색
         router.push(`/item/${encodeURIComponent(selectedItem)}`);
       }
-    } else if (searchQuery.trim()) {
+    } else {
       // 캐릭터 검색 모드
-      if (isItemSearch) {
-        // 아이템 검색 모드에서 선택된 아이템이 없는 경우 옵션 정보 가져오기 시도
-        handleItemSelect(searchQuery.trim());
-      } else {
-        router.push(`/character/${encodeURIComponent(searchQuery.trim())}`);
+      if (searchQuery.trim()) {
+        setSelectedCharacter(searchQuery.trim());
       }
     }
   };
@@ -281,8 +289,13 @@ export function SearchPage() {
               onChange={(e) => {
                 const newValue = e.target.value;
                 setSearchQuery(newValue);
-                setSelectedItem(null); // 입력 변경 시 선택된 아이템 초기화
-                setSelectedOptionId(null); // 입력 변경 시 선택된 옵션 초기화
+
+                if (isItemSearch) {
+                  setSelectedItem(null); // 입력 변경 시 선택된 아이템 초기화
+                  setSelectedOptionId(null); // 입력 변경 시 선택된 옵션 초기화
+                } else {
+                  setSelectedCharacter(null); // 입력 변경 시 선택된 캐릭터 초기화
+                }
 
                 // 아이디 검색 모드일 때는 자동완성 API 이용하지 않음
                 if (!isItemSearch) {
@@ -317,6 +330,12 @@ export function SearchPage() {
               }}
               className="search-input"
               onKeyDown={(e) => {
+                // 엔터키 처리
+                if (e.key === "Enter") {
+                  handleSearch();
+                  return;
+                }
+
                 // 자동완성 목록이 표시되지 않은 경우 처리하지 않음
                 if (!showSuggestions || suggestions.length === 0) return;
 
@@ -362,27 +381,11 @@ export function SearchPage() {
           </div>
           <button
             className="search-button"
-            onClick={() => {
-              if (isItemSearch) {
-                // 아이템 검색 모드: 옵션 선택 버튼
-                if (searchQuery.trim().length >= 2) {
-                  handleItemSelect(searchQuery.trim());
-                }
-              } else {
-                // 캐릭터 검색 모드: 검색 버튼
-                if (searchQuery.trim()) {
-                  router.push(
-                    `/character/${encodeURIComponent(searchQuery.trim())}`
-                  );
-                }
-              }
-            }}
+            onClick={handleSearch}
             type="button"
           >
             {isItemSearch ? (
-              <>
-                옵션 검색
-              </>
+              <>옵션 검색</>
             ) : (
               <>
                 <Search className="mr-2 h-4 w-4" />
@@ -391,36 +394,43 @@ export function SearchPage() {
           </button>
         </div>
 
-        {/* Animated options panel */}
-        <div className={isItemSearch ? "slide-enter" : "slide-exit"}>
-          {optionsVisible && (
-            <div className="options-wrapper">
-              <ItemOptions
-                isActive={!!selectedItem}
-                itemName={selectedItem}
-                availableOptions={itemOptions}
-                isLoading={isLoadingOptions}
-                onOptionSelect={handleOptionSelect}
-              />
+        {/* 아이템 검색 옵션 패널 */}
+        {isItemSearch ? (
+          <div className={isItemSearch ? "slide-enter" : "slide-exit"}>
+            {optionsVisible && (
+              <div className="options-wrapper">
+                <ItemOptions
+                  isActive={!!selectedItem}
+                  itemName={selectedItem}
+                  availableOptions={itemOptions}
+                  isLoading={isLoadingOptions}
+                  onOptionSelect={handleOptionSelect}
+                />
 
-              {selectedItem && itemOptions && (
-                <div className="search-button-container">
-                  <button
-                    className={`search-button-large ${
-                      !selectedOptionId && isItemSearch ? "opacity-50" : ""
-                    }`}
-                    onClick={handleSearch}
-                    disabled={!selectedOptionId && isItemSearch}
-                    type="button"
-                  >
-                    <Search className="mr-2 h-5 w-5" />
-                    검색
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+                {selectedItem && itemOptions && (
+                  <div className="search-button-container">
+                    <button
+                      className={`search-button-large ${
+                        !selectedOptionId && isItemSearch ? "opacity-50" : ""
+                      }`}
+                      onClick={handleSearch}
+                      disabled={!selectedOptionId && isItemSearch}
+                      type="button"
+                    >
+                      <Search className="mr-2 h-5 w-5" />
+                      검색
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* 캐릭터 검색 결과 패널 */
+          <div className={!isItemSearch ? "slide-enter" : "slide-exit"}>
+            <CharacterSearchResults characterName={selectedCharacter} />
+          </div>
+        )}
       </div>
     </div>
   );
