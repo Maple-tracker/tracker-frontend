@@ -348,11 +348,11 @@ function generateSampleCharacterData(name: string): CharacterData {
 
 export async function GET(
   request: Request,
-  { params }: { params: { name: string } }
+  context: { params: { name: string } }
 ) {
   try {
     // URL에서 캐릭터 이름 추출
-    const characterName = decodeURIComponent(params.name);
+    const characterName = decodeURIComponent(context.params.name);
 
     // 실제 API 연동 시에는 여기서 외부 API 호출 또는 DB 쿼리 수행
     // 목업 데이터 생성
