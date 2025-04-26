@@ -24,7 +24,7 @@ export type CharacterData = {
   level: number;
   job: string;
   server: string;
-  guild?: string | null;
+  guild?: string;
   equippedItems: EquippedItem[];
   lastUpdated: string;
 };
@@ -346,13 +346,14 @@ function generateSampleCharacterData(name: string): CharacterData {
   };
 }
 
+// 올바른 매개변수 구조 분해 패턴을 사용합니다
 export async function GET(
   request: Request,
-  context: { params: { name: string } }
+  { params }: { params: { name: string } }
 ) {
   try {
     // URL에서 캐릭터 이름 추출
-    const characterName = decodeURIComponent(context.params.name);
+    const characterName = decodeURIComponent(params.name);
 
     // 실제 API 연동 시에는 여기서 외부 API 호출 또는 DB 쿼리 수행
     // 목업 데이터 생성
