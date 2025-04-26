@@ -68,18 +68,20 @@ async function getItemData(
 
 // Next.js 15 타입 정의에 맞게 수정
 type ItemPageProps = {
-  params: { slug: string };
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
 export default async function ItemPage({
   params,
   searchParams,
 }: ItemPageProps) {
-  const slug = params.slug;
+  // params와 searchParams를 await로 접근
+  const { slug } = await params;
+  const resolvedSearchParams = await searchParams;
   const optionId =
-    typeof searchParams.optionId === "string"
-      ? searchParams.optionId
+    typeof resolvedSearchParams.optionId === "string"
+      ? resolvedSearchParams.optionId
       : undefined;
 
   // 비동기 데이터 가져오기
