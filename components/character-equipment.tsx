@@ -4,7 +4,7 @@ import type React from "react";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { EquippedItem } from "@/app/api/character/[name]/route";
+import type { EquippedItem } from "@/components/character-search-results";
 
 // 아이템 슬롯 위치 정의 - 새로운 레이아웃으로 업데이트
 const SLOT_POSITIONS: Record<string, { grid: string; position: string }> = {
