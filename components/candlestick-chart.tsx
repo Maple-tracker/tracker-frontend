@@ -53,8 +53,7 @@ export function CandlestickChart({
   // 캔버스 그리기
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !data || data.length === 0 || containerSize.width === 0)
-      return;
+    if (!canvas || containerSize.width === 0) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -68,11 +67,32 @@ export function CandlestickChart({
     const chartWidth = containerSize.width - padding.left - padding.right;
     const chartHeight = containerSize.height - padding.top - padding.bottom;
 
+    // 데이터가 없거나 너무 적은 경우 처리
+    if (!data || data.length === 0) {
+      // 데이터가 없는 경우 메시지 표시
+      ctx.fillStyle = "rgba(15, 15, 26, 0.3)";
+      ctx.fillRect(0, 0, containerSize.width, containerSize.height);
+
+      ctx.fillStyle = "#9CA3AF";
+      ctx.font = "14px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(
+        "데이터가 없습니다",
+        containerSize.width / 2,
+        containerSize.height / 2
+      );
+      return;
+    }
+
     // 데이터 범위 계산
     const prices = data.flatMap((d) => [d.highPrice, d.lowPrice, d.price]);
     const minPrice = Math.min(...prices);
     const maxPrice = Math.max(...prices);
-    const priceRange = maxPrice - minPrice;
+
+    // 최소값과 최대값이 같은 경우(데이터 포인트가 하나인 경우) 범위 조정
+    const priceRange =
+      maxPrice - minPrice > 0 ? maxPrice - minPrice : maxPrice * 0.1;
 
     // 가격 -> Y좌표 변환 함수
     const priceToY = (price: number) => {
@@ -110,29 +130,57 @@ export function CandlestickChart({
     }
 
     // 수직 그리드 및 날짜 레이블
-    const dateStep = Math.max(1, Math.floor(data.length / 10));
-    for (let i = 0; i < data.length; i += dateStep) {
-      const x = padding.left + (i / (data.length - 1)) * chartWidth;
+    // 데이터 포인트가 하나인 경우 특별 처리
+    if (data.length === 1) {
+      const x = padding.left + chartWidth / 2;
       ctx.beginPath();
       ctx.moveTo(x, padding.top);
       ctx.lineTo(x, containerSize.height - padding.bottom);
       ctx.stroke();
 
       // 날짜 레이블
-      const date = new Date(data[i].date);
+      const date = new Date(data[0].date);
       const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
       ctx.fillStyle = "#9CA3AF";
       ctx.font = "10px Arial";
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
       ctx.fillText(dateStr, x, containerSize.height - padding.bottom + 5);
+    } else {
+      const dateStep = Math.max(1, Math.floor(data.length / 10));
+      for (let i = 0; i < data.length; i += dateStep) {
+        const x = padding.left + (i / (data.length - 1)) * chartWidth;
+        ctx.beginPath();
+        ctx.moveTo(x, padding.top);
+        ctx.lineTo(x, containerSize.height - padding.bottom);
+        ctx.stroke();
+
+        // 날짜 레이블
+        const date = new Date(data[i].date);
+        const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+        ctx.fillStyle = "#9CA3AF";
+        ctx.font = "10px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText(dateStr, x, containerSize.height - padding.bottom + 5);
+      }
     }
 
     // 캔들스틱 그리기
-    const candleWidth = Math.min(12, chartWidth / data.length / 1.5); // 더 굵은 캔들로 변경
+    const candleWidth = Math.min(
+      12,
+      chartWidth / Math.max(data.length, 1) / 1.5
+    ); // 더 굵은 캔들로 변경
 
     data.forEach((d, i) => {
-      const x = padding.left + (i / (data.length - 1)) * chartWidth;
+      // 데이터 포인트가 하나인 경우 중앙에 배치
+      let x;
+      if (data.length === 1) {
+        x = padding.left + chartWidth / 2;
+      } else {
+        x = padding.left + (i / (data.length - 1)) * chartWidth;
+      }
+
       const candleX = x - candleWidth / 2;
 
       const highY = priceToY(d.highPrice);
@@ -200,6 +248,21 @@ export function CandlestickChart({
     // 차트 영역 설정
     const padding = { top: 20, right: 50, bottom: 30, left: 60 };
     const chartWidth = rect.width - padding.left - padding.right;
+
+    // 데이터 포인트가 하나인 경우 특별 처리
+    if (data.length === 1) {
+      const centerX = padding.left + chartWidth / 2;
+      // 중앙 근처에 마우스가 있으면 첫 번째 데이터 포인트 선택
+      if (Math.abs(x - centerX) < 20) {
+        setHoveredIndex(0);
+        if (onHover) {
+          onHover(data[0], 0);
+        }
+      } else {
+        setHoveredIndex(null);
+      }
+      return;
+    }
 
     // 마우스 위치에 해당하는 데이터 인덱스 계산
     const dataIndex = Math.round(
@@ -342,7 +405,7 @@ export function CandlestickChart({
               </span>
             </div>
           </div>
-          {hoveredIndex > 0 && (
+          {hoveredIndex > 0 && data.length > 1 && (
             <div
               style={{
                 marginTop: "0.5rem",

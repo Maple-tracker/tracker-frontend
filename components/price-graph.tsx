@@ -51,8 +51,11 @@ export function PriceGraph({ priceHistory }: PriceGraphProps) {
     });
   })();
 
+  // 필터링된 데이터가 없는 경우 모든 데이터 표시
+  const dataToDisplay = filteredData.length > 0 ? filteredData : priceHistory;
+
   // 캔들 차트를 위한 데이터 가공 및 전일 대비 등락 계산
-  const processedData = filteredData.map((point, index, array) => {
+  const processedData = dataToDisplay.map((point, index, array) => {
     // 이전 데이터와 비교하여 상승/하락 여부 결정
     const isRising = index > 0 ? point.price >= array[index - 1].price : true;
 
@@ -66,6 +69,25 @@ export function PriceGraph({ priceHistory }: PriceGraphProps) {
   const handleHover = (dataPoint: any) => {
     setHoveredData(dataPoint);
   };
+
+  // 시작 가격과 종료 가격 계산 (데이터가 하나인 경우도 처리)
+  const startPrice = dataToDisplay.length > 0 ? dataToDisplay[0].price : 0;
+  const endPrice =
+    dataToDisplay.length > 0
+      ? dataToDisplay[dataToDisplay.length - 1].price
+      : 0;
+  const priceChange = endPrice - startPrice;
+  const priceChangePercent =
+    startPrice > 0 ? (priceChange / startPrice) * 100 : 0;
+
+  // 평균 거래량 계산
+  const avgVolume =
+    dataToDisplay.length > 0
+      ? Math.round(
+          dataToDisplay.reduce((sum, point) => sum + point.volume, 0) /
+            dataToDisplay.length
+        )
+      : 0;
 
   return (
     <div>
@@ -109,33 +131,25 @@ export function PriceGraph({ priceHistory }: PriceGraphProps) {
 
       <div className="chart-stats">
         <div className="stat-card">
-          <div className="stat-label">시작 가격</div>
+          <div className="stat-label">평균 가격</div>
           <div className="stat-value">
             {filteredData[0]?.price.toLocaleString()} 메소
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">종료 가격</div>
-          <div className="stat-value">
-            {filteredData[filteredData.length - 1]?.price.toLocaleString()} 메소
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-label">가격 변동</div>
           <div
             className={`stat-value ${
-              filteredData[filteredData.length - 1]?.price -
-                filteredData[0]?.price >=
-              0
-                ? "positive"
-                : "negative"
+              priceChange >= 0 ? "positive" : "negative"
             }`}
           >
-            {(
-              filteredData[filteredData.length - 1]?.price -
-              filteredData[0]?.price
-            ).toLocaleString()}{" "}
-            메소
+            {priceChange.toLocaleString()} 메소
+            {dataToDisplay.length > 1 && (
+              <span className="text-xs ml-1">
+                ({priceChangePercent >= 0 ? "+" : ""}
+                {priceChangePercent.toFixed(2)}%)
+              </span>
+            )}
           </div>
         </div>
         <div className="stat-card">
