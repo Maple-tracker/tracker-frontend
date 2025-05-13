@@ -27,6 +27,7 @@ export type Option = {
   value: string;
   label: string;
   disabled?: boolean;
+  combinationInfo?: string; // 선택된 다른 옵션 정보
 };
 
 export type OptionField =
@@ -37,8 +38,9 @@ export type OptionField =
   | "enchantedFlag";
 export type OptionValue<T extends OptionField> = T extends "enchantedFlag"
   ? boolean
-  : string;
+  : string | string[];
 
+// 등급 순서 정의
 const gradeOrder = {
   없음: 0,
   레어: 1,
@@ -58,9 +60,9 @@ const sortStarForce = (a: string, b: string): number => {
   return numA - numB;
 };
 
-// 잠재능력 정렬 함수
+// 잠재능력 정렬 함수 (예: "레전드리 0% 정옵", "없음 0% 정옵", "유니크 6% 정옵")
 const sortPotential = (a: string, b: string): number => {
-  // 문자열 변환
+  // 문자열이 아닌 경우 안전하게 문자열로 변환
   const strA = String(a);
   const strB = String(b);
 
@@ -82,9 +84,9 @@ const sortPotential = (a: string, b: string): number => {
   return percentA - percentB;
 };
 
-// 에디셔널 잠재능력 정렬 함수
+// 에디셔널 잠재능력 정렬 함수 (예: "레전드리 3 2", "에픽 2 0", "유니크 2 1")
 const sortAdditionalPotential = (a: string, b: string): number => {
-  // 문자열 변환
+  // 문자열이 아닌 경우 안전하게 문자열로 변환
   const strA = String(a);
   const strB = String(b);
 
@@ -125,42 +127,40 @@ const sortAdditionalPotential = (a: string, b: string): number => {
 };
 
 export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
-  const [starForce, setStarForce] = useState("");
-  const [potentialOption, setPotentialOption] = useState("");
-  const [additionalPotentialOption, setAdditionalPotentialOption] =
-    useState("");
-  const [statType, setStatType] = useState("");
+  const [starForce, setStarForce] = useState<string[]>([]);
+  const [potentialOption, setPotentialOption] = useState<string[]>([]);
+  const [additionalPotentialOption, setAdditionalPotentialOption] = useState<
+    string[]
+  >([]);
+  const [statType, setStatType] = useState<string[]>([]);
   const [enchantedFlag, setEnchantedFlag] = useState(false);
-  const [filteredCombinations, setFilteredCombinations] = useState<
+  const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
+  const [availableCombinations, setAvailableCombinations] = useState<
     OptionCombination[]
   >([]);
-  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
 
   // 아이템 옵션 데이터가 변경되면 상태 초기화
   useEffect(() => {
-    setStarForce("");
-    setPotentialOption("");
-    setAdditionalPotentialOption("");
-    setStatType("");
+    setStarForce([]);
+    setPotentialOption([]);
+    setAdditionalPotentialOption([]);
+    setStatType([]);
     setEnchantedFlag(false);
-    setSelectedOptionId(null);
+    setSelectedOptionIds([]);
 
     if (itemOptionsData?.combinations) {
-      setFilteredCombinations(itemOptionsData.combinations);
+      setAvailableCombinations(itemOptionsData.combinations);
     } else {
-      setFilteredCombinations([]);
+      setAvailableCombinations([]);
     }
   }, [itemOptionsData]);
 
-  // 옵션 선택 시 다른 옵션 필터링
-  const updateAvailableOptions = <T extends OptionField>(
-    field: T,
-    value: OptionValue<T>
-  ) => {
+  // 선택된 옵션에 맞는 조합 찾기
+  const updateSelectedOptionIds = () => {
     if (!itemOptionsData?.combinations) return;
 
-    // 현재 선택된 옵션들
-    const currentSelections = {
+    // 선택된 옵션들
+    const selectedOptions = {
       starForce,
       potentialOption,
       additionalPotentialOption,
@@ -168,150 +168,390 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
       enchantedFlag,
     };
 
-    // 새로 선택된 옵션 업데이트
-    currentSelections[field] = value as any;
-
     // 선택된 옵션에 맞는 조합 필터링
-    const newFilteredCombinations = itemOptionsData.combinations.filter(
+    const matchingCombinations = itemOptionsData.combinations.filter(
       (combo) => {
+        const starForceMatch =
+          selectedOptions.starForce.length === 0 ||
+          selectedOptions.starForce.includes(combo.starForce);
+        const potentialMatch =
+          selectedOptions.potentialOption.length === 0 ||
+          selectedOptions.potentialOption.includes(combo.potentialOption);
+        const additionalMatch =
+          selectedOptions.additionalPotentialOption.length === 0 ||
+          selectedOptions.additionalPotentialOption.includes(
+            combo.additionalPotentialOption
+          );
+        const statTypeMatch =
+          selectedOptions.statType.length === 0 ||
+          selectedOptions.statType.includes(combo.statType);
+        const enchantedMatch =
+          !selectedOptions.enchantedFlag ||
+          combo.enchantedFlag === selectedOptions.enchantedFlag;
+
         return (
-          (!currentSelections.starForce ||
-            combo.starForce === currentSelections.starForce) &&
-          (!currentSelections.potentialOption ||
-            combo.potentialOption === currentSelections.potentialOption) &&
-          (!currentSelections.additionalPotentialOption ||
-            combo.additionalPotentialOption ===
-              currentSelections.additionalPotentialOption) &&
-          (!currentSelections.statType ||
-            combo.statType === currentSelections.statType) &&
-          (currentSelections.enchantedFlag === false ||
-            combo.enchantedFlag === currentSelections.enchantedFlag)
+          starForceMatch &&
+          potentialMatch &&
+          additionalMatch &&
+          statTypeMatch &&
+          enchantedMatch
         );
       }
     );
 
-    setFilteredCombinations(newFilteredCombinations);
-
-    // 모든 옵션이 선택되었는지 확인
-    const allSelected =
-      currentSelections.starForce !== "" &&
-      currentSelections.potentialOption !== "" &&
-      currentSelections.additionalPotentialOption !== "" &&
-      currentSelections.statType !== "";
-
-    // 정확히 하나의 조합만 남았거나 모든 옵션이 선택된 경우
-    if (newFilteredCombinations.length === 1 && allSelected) {
-      setSelectedOptionId(newFilteredCombinations[0].id);
-    } else {
-      setSelectedOptionId(null);
-    }
+    // 선택된 조합들의 ID 업데이트
+    const matchingOptionIds = matchingCombinations.map((combo) => combo.id);
+    setSelectedOptionIds(matchingOptionIds);
+    setAvailableCombinations(matchingCombinations);
   };
 
   // 옵션 변경 핸들러
-  const handleStarForceChange = (value: string) => {
-    setStarForce(value);
-    updateAvailableOptions("starForce", value);
+  const handleStarForceChange = (value: string | string[]) => {
+    const newValue = Array.isArray(value) ? value : [value];
+    setStarForce(newValue);
+    setTimeout(() => updateSelectedOptionIds(), 0);
   };
 
-  const handlePotentialOptionChange = (value: string) => {
-    setPotentialOption(value);
-    updateAvailableOptions("potentialOption", value);
+  const handlePotentialOptionChange = (value: string | string[]) => {
+    const newValue = Array.isArray(value) ? value : [value];
+    setPotentialOption(newValue);
+    setTimeout(() => updateSelectedOptionIds(), 0);
   };
 
-  const handleAdditionalPotentialOptionChange = (value: string) => {
-    setAdditionalPotentialOption(value);
-    updateAvailableOptions("additionalPotentialOption", value);
+  const handleAdditionalPotentialOptionChange = (value: string | string[]) => {
+    const newValue = Array.isArray(value) ? value : [value];
+    setAdditionalPotentialOption(newValue);
+    setTimeout(() => updateSelectedOptionIds(), 0);
   };
 
-  const handleStatTypeChange = (value: string) => {
-    setStatType(value);
-    updateAvailableOptions("statType", value);
+  const handleStatTypeChange = (value: string | string[]) => {
+    const newValue = Array.isArray(value) ? value : [value];
+    setStatType(newValue);
+    setTimeout(() => updateSelectedOptionIds(), 0);
   };
 
   const handleEnchantedFlagChange = (checked: boolean) => {
     setEnchantedFlag(checked);
-    updateAvailableOptions("enchantedFlag", checked);
+    setTimeout(() => updateSelectedOptionIds(), 0);
   };
 
-  // 현재 선택 가능한 옵션 목록 생성 함수 - 롤백: 선택 가능한 옵션만 반환
+  // 선택된 옵션 정보를 포함한 옵션 목록 생성 함수
   const getAvailableStarForceOptions = (): Option[] => {
     if (!itemOptionsData?.availableOptions?.starForce) return [];
 
-    // 필터링된 조합에서 가능한 스타포스 값 추출
-    const availableValues = [
-      ...new Set(filteredCombinations.map((combo) => combo.starForce)),
+    // 모든 가능한 스타포스 값 추출
+    const allStarForceValues = [
+      ...new Set(itemOptionsData.combinations.map((combo) => combo.starForce)),
     ];
 
-    // 선택 가능한 옵션만 반환 (오름차순 정렬)
-    return availableValues.sort(sortStarForce).map((value) => ({
-      value,
-      label: value,
-    }));
+    // 각 스타포스 값에 대해 조합 정보 추가
+    return allStarForceValues.sort(sortStarForce).map((value) => {
+      // 이 스타포스 값과 함께 사용 가능한 조합 찾기
+      const combinationsWithThisValue = itemOptionsData.combinations.filter(
+        (combo) =>
+          combo.starForce === value &&
+          (potentialOption.length === 0 ||
+            potentialOption.includes(combo.potentialOption)) &&
+          (additionalPotentialOption.length === 0 ||
+            additionalPotentialOption.includes(
+              combo.additionalPotentialOption
+            )) &&
+          (statType.length === 0 || statType.includes(combo.statType)) &&
+          (!enchantedFlag || combo.enchantedFlag === enchantedFlag)
+      );
+
+      // 조합 정보 생성
+      let combinationInfo = "";
+      if (
+        combinationsWithThisValue.length > 0 &&
+        (potentialOption.length > 0 ||
+          additionalPotentialOption.length > 0 ||
+          statType.length > 0)
+      ) {
+        const infoItems = [];
+
+        if (potentialOption.length > 0) {
+          const potOptions = [
+            ...new Set(combinationsWithThisValue.map((c) => c.potentialOption)),
+          ];
+          if (potOptions.length > 0) infoItems.push(potOptions.join(", "));
+        }
+
+        if (additionalPotentialOption.length > 0) {
+          const addPotOptions = [
+            ...new Set(
+              combinationsWithThisValue.map((c) => c.additionalPotentialOption)
+            ),
+          ];
+          if (addPotOptions.length > 0)
+            infoItems.push(addPotOptions.join(", "));
+        }
+
+        if (statType.length > 0) {
+          const statOptions = [
+            ...new Set(combinationsWithThisValue.map((c) => c.statType)),
+          ];
+          if (statOptions.length > 0) infoItems.push(statOptions.join(", "));
+        }
+
+        if (infoItems.length > 0) {
+          combinationInfo = infoItems.join(" / ");
+        }
+      }
+
+      return {
+        value,
+        label: value,
+        combinationInfo,
+        disabled: combinationsWithThisValue.length === 0,
+      };
+    });
   };
 
   const getAvailablePotentialOptions = (): Option[] => {
     if (!itemOptionsData?.availableOptions?.potentialOption) return [];
 
-    // 필터링된 조합에서 가능한 잠재능력 값 추출
-    const availableValues = [
-      ...new Set(filteredCombinations.map((combo) => combo.potentialOption)),
+    // 모든 가능한 잠재능력 값 추출
+    const allPotentialValues = [
+      ...new Set(
+        itemOptionsData.combinations.map((combo) => combo.potentialOption)
+      ),
     ];
 
-    // 선택 가능한 옵션만 반환 (오름차순 정렬)
-    return availableValues.sort(sortPotential).map((value) => ({
-      value,
-      label: value,
-    }));
+    // 각 잠재능력 값에 대해 조합 정보 추가
+    return allPotentialValues.sort(sortPotential).map((value) => {
+      // 이 잠재능력 값과 함께 사용 가능한 조합 찾기
+      const combinationsWithThisValue = itemOptionsData.combinations.filter(
+        (combo) =>
+          combo.potentialOption === value &&
+          (starForce.length === 0 || starForce.includes(combo.starForce)) &&
+          (additionalPotentialOption.length === 0 ||
+            additionalPotentialOption.includes(
+              combo.additionalPotentialOption
+            )) &&
+          (statType.length === 0 || statType.includes(combo.statType)) &&
+          (!enchantedFlag || combo.enchantedFlag === enchantedFlag)
+      );
+
+      // 조합 정보 생성
+      let combinationInfo = "";
+      if (
+        combinationsWithThisValue.length > 0 &&
+        (starForce.length > 0 ||
+          additionalPotentialOption.length > 0 ||
+          statType.length > 0)
+      ) {
+        const infoItems = [];
+
+        if (starForce.length > 0) {
+          const sfOptions = [
+            ...new Set(combinationsWithThisValue.map((c) => c.starForce)),
+          ];
+          if (sfOptions.length > 0) infoItems.push(sfOptions.join(", "));
+        }
+
+        if (additionalPotentialOption.length > 0) {
+          const addPotOptions = [
+            ...new Set(
+              combinationsWithThisValue.map((c) => c.additionalPotentialOption)
+            ),
+          ];
+          if (addPotOptions.length > 0)
+            infoItems.push(addPotOptions.join(", "));
+        }
+
+        if (statType.length > 0) {
+          const statOptions = [
+            ...new Set(combinationsWithThisValue.map((c) => c.statType)),
+          ];
+          if (statOptions.length > 0) infoItems.push(statOptions.join(", "));
+        }
+
+        if (infoItems.length > 0) {
+          combinationInfo = infoItems.join(" / ");
+        }
+      }
+
+      return {
+        value,
+        label: value,
+        combinationInfo,
+        disabled: combinationsWithThisValue.length === 0,
+      };
+    });
   };
 
   const getAvailableAdditionalPotentialOptions = (): Option[] => {
     if (!itemOptionsData?.availableOptions?.additionalPotentialOption)
       return [];
 
-    // 필터링된 조합에서 가능한 추가 잠재능력 값 추출
-    const availableValues = [
+    // 모든 가능한 추가 잠재능력 값 추출
+    const allAdditionalValues = [
       ...new Set(
-        filteredCombinations.map((combo) => combo.additionalPotentialOption)
+        itemOptionsData.combinations.map(
+          (combo) => combo.additionalPotentialOption
+        )
       ),
     ];
 
-    // 선택 가능한 옵션만 반환 (오름차순 정렬)
-    return availableValues.sort(sortAdditionalPotential).map((value) => ({
-      value,
-      label: value,
-    }));
+    // 각 추가 잠재능력 값에 대해 조합 정보 추가
+    return allAdditionalValues.sort(sortAdditionalPotential).map((value) => {
+      // 이 추가 잠재능력 값과 함께 사용 가능한 조합 찾기
+      const combinationsWithThisValue = itemOptionsData.combinations.filter(
+        (combo) =>
+          combo.additionalPotentialOption === value &&
+          (starForce.length === 0 || starForce.includes(combo.starForce)) &&
+          (potentialOption.length === 0 ||
+            potentialOption.includes(combo.potentialOption)) &&
+          (statType.length === 0 || statType.includes(combo.statType)) &&
+          (!enchantedFlag || combo.enchantedFlag === enchantedFlag)
+      );
+
+      // 조합 정보 생성
+      let combinationInfo = "";
+      if (
+        combinationsWithThisValue.length > 0 &&
+        (starForce.length > 0 ||
+          potentialOption.length > 0 ||
+          statType.length > 0)
+      ) {
+        const infoItems = [];
+
+        if (starForce.length > 0) {
+          const sfOptions = [
+            ...new Set(combinationsWithThisValue.map((c) => c.starForce)),
+          ];
+          if (sfOptions.length > 0) infoItems.push(sfOptions.join(", "));
+        }
+
+        if (potentialOption.length > 0) {
+          const potOptions = [
+            ...new Set(combinationsWithThisValue.map((c) => c.potentialOption)),
+          ];
+          if (potOptions.length > 0) infoItems.push(potOptions.join(", "));
+        }
+
+        if (statType.length > 0) {
+          const statOptions = [
+            ...new Set(combinationsWithThisValue.map((c) => c.statType)),
+          ];
+          if (statOptions.length > 0) infoItems.push(statOptions.join(", "));
+        }
+
+        if (infoItems.length > 0) {
+          combinationInfo = infoItems.join(" / ");
+        }
+      }
+
+      return {
+        value,
+        label: value,
+        combinationInfo,
+        disabled: combinationsWithThisValue.length === 0,
+      };
+    });
   };
 
   const getAvailableStatTypeOptions = (): Option[] => {
     if (!itemOptionsData?.availableOptions?.statType) return [];
 
-    // 필터링된 조합에서 가능한 스탯타입 값 추출
-    const availableValues = [
-      ...new Set(filteredCombinations.map((combo) => combo.statType)),
+    // 모든 가능한 스탯타입 값 추출
+    const allStatTypeValues = [
+      ...new Set(itemOptionsData.combinations.map((combo) => combo.statType)),
     ];
 
-    // 선택 가능한 옵션만 반환
-    return availableValues.map((value) => ({
-      value,
-      label: value,
-    }));
+    // 각 스탯타입 값에 대해 조합 정보 추가
+    return allStatTypeValues.map((value) => {
+      // 이 스탯타입 값과 함께 사용 가능한 조합 찾기
+      const combinationsWithThisValue = itemOptionsData.combinations.filter(
+        (combo) =>
+          combo.statType === value &&
+          (starForce.length === 0 || starForce.includes(combo.starForce)) &&
+          (potentialOption.length === 0 ||
+            potentialOption.includes(combo.potentialOption)) &&
+          (additionalPotentialOption.length === 0 ||
+            additionalPotentialOption.includes(
+              combo.additionalPotentialOption
+            )) &&
+          (!enchantedFlag || combo.enchantedFlag === enchantedFlag)
+      );
+
+      // 조합 정보 생성
+      let combinationInfo = "";
+      if (
+        combinationsWithThisValue.length > 0 &&
+        (starForce.length > 0 ||
+          potentialOption.length > 0 ||
+          additionalPotentialOption.length > 0)
+      ) {
+        const infoItems = [];
+
+        if (starForce.length > 0) {
+          const sfOptions = [
+            ...new Set(combinationsWithThisValue.map((c) => c.starForce)),
+          ];
+          if (sfOptions.length > 0) infoItems.push(sfOptions.join(", "));
+        }
+
+        if (potentialOption.length > 0) {
+          const potOptions = [
+            ...new Set(combinationsWithThisValue.map((c) => c.potentialOption)),
+          ];
+          if (potOptions.length > 0) infoItems.push(potOptions.join(", "));
+        }
+
+        if (additionalPotentialOption.length > 0) {
+          const addPotOptions = [
+            ...new Set(
+              combinationsWithThisValue.map((c) => c.additionalPotentialOption)
+            ),
+          ];
+          if (addPotOptions.length > 0)
+            infoItems.push(addPotOptions.join(", "));
+        }
+
+        if (infoItems.length > 0) {
+          combinationInfo = infoItems.join(" / ");
+        }
+      }
+
+      return {
+        value,
+        label: value,
+        combinationInfo,
+        disabled: combinationsWithThisValue.length === 0,
+      };
+    });
   };
 
   // 인챈트 플래그 선택 가능 여부
   const isEnchantedFlagAvailable = (): boolean => {
-    return filteredCombinations.some((combo) => combo.enchantedFlag);
+    if (!itemOptionsData?.combinations) return false;
+
+    return itemOptionsData.combinations.some(
+      (combo) =>
+        combo.enchantedFlag &&
+        (starForce.length === 0 || starForce.includes(combo.starForce)) &&
+        (potentialOption.length === 0 ||
+          potentialOption.includes(combo.potentialOption)) &&
+        (additionalPotentialOption.length === 0 ||
+          additionalPotentialOption.includes(
+            combo.additionalPotentialOption
+          )) &&
+        (statType.length === 0 || statType.includes(combo.statType))
+    );
   };
 
   // 옵션 초기화 함수
   const resetOptions = () => {
-    setStarForce("");
-    setPotentialOption("");
-    setAdditionalPotentialOption("");
-    setStatType("");
+    setStarForce([]);
+    setPotentialOption([]);
+    setAdditionalPotentialOption([]);
+    setStatType([]);
     setEnchantedFlag(false);
-    setSelectedOptionId(null);
+    setSelectedOptionIds([]);
     if (itemOptionsData?.combinations) {
-      setFilteredCombinations(itemOptionsData.combinations);
+      setAvailableCombinations(itemOptionsData.combinations);
     }
   };
 
@@ -322,8 +562,8 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
     additionalPotentialOption,
     statType,
     enchantedFlag,
-    selectedOptionId,
-    filteredCombinations,
+    selectedOptionIds,
+    availableCombinations,
 
     // 핸들러
     handleStarForceChange,

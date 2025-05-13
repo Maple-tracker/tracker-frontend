@@ -151,7 +151,7 @@ export function SearchPage() {
     null
   );
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
-  const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+  const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
 
   const fetchSuggestions = useCallback(
     async (query: string) => {
@@ -178,7 +178,7 @@ export function SearchPage() {
     setSearchQuery("");
     setSelectedItem(null);
     setSelectedCharacter(null);
-    setSelectedOptionId(null);
+    setSelectedOptionIds([]);
     setSuggestions([]);
     setShowSuggestions(false);
     if (isItemSearch) {
@@ -197,7 +197,8 @@ export function SearchPage() {
     setSelectedItem(itemName);
     setSearchQuery(itemName);
     setShowSuggestions(false);
-    setSelectedOptionId(null);
+    setSelectedOptionIds([]);
+    setSelectedSuggestionIndex(-1);
 
     setIsLoadingOptions(true);
     const options = await fetchItemOptions(itemName);
@@ -206,28 +207,22 @@ export function SearchPage() {
   };
 
   // 옵션 선택 핸들러
-  const handleOptionSelect = (optionId: string | null) => {
-    setSelectedOptionId(optionId);
+  const handleOptionSelect = (optionIds: string[]) => {
+    setSelectedOptionIds(optionIds);
   };
 
+  // 검색 버튼 클릭 핸들러
   const handleSearch = () => {
     if (selectedItem) {
       // 아이템 검색 모드
-      if (selectedOptionId) {
-        // 옵션 ID가 있는 경우 포함하여 검색
-        router.push(
-          `/item/${encodeURIComponent(
-            selectedItem
-          )}?optionId=${selectedOptionId}`
-        );
-      } else {
-        // 옵션 ID가 없는 경우 기본 검색
-        router.push(`/item/${encodeURIComponent(selectedItem)}`);
-      }
-    } else {
+      router.push(`/item/${encodeURIComponent(selectedItem)}`);
+    } else if (searchQuery.trim()) {
       // 캐릭터 검색 모드
-      if (searchQuery.trim()) {
-        setSelectedCharacter(searchQuery.trim());
+      if (isItemSearch) {
+        // 아이템 검색 모드에서 선택된 아이템이 없는 경우 옵션 정보 가져오기 시도
+        handleItemSelect(searchQuery.trim());
+      } else {
+        router.push(`/character/${encodeURIComponent(searchQuery.trim())}`);
       }
     }
   };
@@ -292,7 +287,7 @@ export function SearchPage() {
 
                 if (isItemSearch) {
                   setSelectedItem(null); // 입력 변경 시 선택된 아이템 초기화
-                  setSelectedOptionId(null); // 입력 변경 시 선택된 옵션 초기화
+                  setSelectedOptionIds([]); // 입력 변경 시 선택된 옵션 초기화
                 } else {
                   setSelectedCharacter(null); // 입력 변경 시 선택된 캐릭터 초기화
                 }
@@ -332,7 +327,14 @@ export function SearchPage() {
               onKeyDown={(e) => {
                 // 엔터키 처리
                 if (e.key === "Enter") {
-                  handleSearch();
+                  // 자동완성 목록에서 항목이 선택된 경우
+                  if (showSuggestions && selectedSuggestionIndex >= 0) {
+                    e.preventDefault(); // 기본 동작 방지
+                    handleItemSelect(suggestions[selectedSuggestionIndex]);
+                  } else {
+                    // 선택된 항목이 없는 경우 일반 검색 실행
+                    handleSearch();
+                  }
                   return;
                 }
 
@@ -411,10 +413,12 @@ export function SearchPage() {
                   <div className="search-button-container">
                     <button
                       className={`search-button-large ${
-                        !selectedOptionId && isItemSearch ? "opacity-50" : ""
+                        selectedOptionIds.length !== 0 && isItemSearch
+                          ? "opacity-50"
+                          : ""
                       }`}
                       onClick={handleSearch}
-                      disabled={!selectedOptionId && isItemSearch}
+                      disabled={selectedOptionIds.length !== 0 && isItemSearch}
                       type="button"
                     >
                       <Search className="mr-2 h-5 w-5" />

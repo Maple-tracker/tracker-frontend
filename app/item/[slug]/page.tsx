@@ -8,24 +8,27 @@ import type { ItemPriceResponse } from "@/types/price-api-types";
 // 아이템 데이터 가져오기
 async function getItemData(
   slug: string,
-  optionId?: string
+  optionIds?: string[]
 ): Promise<ItemPriceResponse> {
   // 서버 컴포넌트에서 API 호출
-  // 외부 API URL 구성 - 템플릿 리터럴 문법 수정
-  const apiUrl = `https://dev.maplemarket.today/api/item/price/${slug}${
-    optionId ? `?optionId=${optionId}` : ""
-  }`;
+  // URL 인코딩된 slug를 디코딩하여 원래 한글 아이템명으로 복원
+  const decodedSlug = decodeURIComponent(slug);
+  const apiUrl = `https://dev.maplemarket.today/api/item/price/${slug}`;
 
   try {
     console.log(`API 요청 URL: ${apiUrl}`); // 디버깅용 로그 추가
+    console.log(`선택된 옵션 IDs:`, optionIds); // 디버깅용 로그 추가
 
+    // POST 요청으로 변경
     const response = await fetch(apiUrl, {
-      next: { revalidate: 3600 }, // 1시간마다 재검증
-      cache: "no-store", // 캐시 사용 안 함
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
+      body: JSON.stringify({ optionIds: optionIds || [] }),
+      next: { revalidate: 3600 }, // 1시간마다 재검증
+      cache: "no-store", // 캐시 사용 안 함
     });
 
     if (!response.ok) {
@@ -45,13 +48,14 @@ async function getItemData(
     return {
       item: {
         id: slug,
-        name: decodeURIComponent(slug),
+        name: decodedSlug,
         imageUrl: "/placeholder.svg?height=64&width=64",
         category: "알 수 없음",
         level: 0,
         tradable: false,
       },
       option: null,
+      options: [],
       priceStats: {
         currentPrice: 0,
         averagePrice: 0,
@@ -79,13 +83,30 @@ export default async function ItemPage({
   // params와 searchParams를 await로 접근
   const { slug } = await params;
   const resolvedSearchParams = await searchParams;
-  const optionId =
-    typeof resolvedSearchParams.optionId === "string"
-      ? resolvedSearchParams.optionId
-      : undefined;
+
+  // 옵션 ID 배열로 변환
+  let optionIds: string[] = [];
+
+  // searchParams에서 optionIds 추출
+  if (resolvedSearchParams.optionIds) {
+    if (Array.isArray(resolvedSearchParams.optionIds)) {
+      optionIds = resolvedSearchParams.optionIds as string[];
+    } else {
+      optionIds = [resolvedSearchParams.optionIds as string];
+    }
+  }
+
+  // 이전 버전과의 호환성을 위해 optionId도 확인
+  if (resolvedSearchParams.optionId && optionIds.length === 0) {
+    if (Array.isArray(resolvedSearchParams.optionId)) {
+      optionIds = resolvedSearchParams.optionId as string[];
+    } else {
+      optionIds = [resolvedSearchParams.optionId as string];
+    }
+  }
 
   // 비동기 데이터 가져오기
-  const itemData = await getItemData(slug, optionId);
+  const itemData = await getItemData(slug, optionIds);
 
   return (
     <div className="magical-gradient">
@@ -118,7 +139,35 @@ export default async function ItemPage({
                   마지막 업데이트:{" "}
                   {new Date(itemData.priceStats.lastUpdated).toLocaleString()}
                 </p>
-                {itemData.option && (
+                {/* 다수의 옵션 표시 */}
+                {itemData.options && itemData.options.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {itemData.options.map((option, index) => (
+                      <div
+                        key={option.id || index}
+                        className="option-tag-group"
+                      >
+                        <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
+                          {option.starForce}
+                        </span>
+                        <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
+                          {option.potentialOption} {option.statType}
+                        </span>
+                        <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
+                          {option.additionalPotentialOption} 에디셔널
+                        </span>
+                        {option.enchantedFlag && (
+                          <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
+                            노작
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 이전 버전과의 호환성을 위해 단일 옵션도 처리 */}
+                {!itemData.options?.length && itemData.option && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
                       {itemData.option.starForce}
@@ -132,7 +181,7 @@ export default async function ItemPage({
                     </span>
                     {itemData.option.enchantedFlag && (
                       <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                        인챈트
+                        노작
                       </span>
                     )}
                   </div>

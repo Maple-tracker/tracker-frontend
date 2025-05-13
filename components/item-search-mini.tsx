@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Filter, RefreshCw } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useItemOptions, type ItemOptionsData } from "@/hooks/use-item-options";
 import { CustomSelect } from "./custom-select";
@@ -36,11 +36,13 @@ const fetchAutocompleteSuggestions = async (query: string) => {
 const fetchItemOptions = async (itemName: string) => {
   try {
     // API 호출
-    const response = await fetch(
-      `https://dev.maplemarket.today/api/item_name/options?name=${encodeURIComponent(
-        itemName
-      )}`
-    );
+    const response = await fetch("/api/item-options", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ itemName }),
+    });
 
     // 404 오류 처리
     if (response.status === 404) {
@@ -86,7 +88,7 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
     additionalPotentialOption,
     statType,
     enchantedFlag,
-    selectedOptionId,
+    selectedOptionIds,
     handleStarForceChange,
     handlePotentialOptionChange,
     handleAdditionalPotentialOptionChange,
@@ -144,6 +146,7 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
   const handleItemSelect = async (itemName: string) => {
     setSearchQuery(itemName);
     setShowSuggestions(false);
+    setSelectedSuggestionIndex(-1); // 선택된 인덱스 초기화
     resetOptions();
 
     setIsLoadingOptions(true);
@@ -165,16 +168,8 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
 
   const handleSearch = () => {
     if (selectedItem) {
-      // 선택된 옵션 정보와 함께 상세 페이지로 이동
-      if (selectedOptionId) {
-        router.push(
-          `/item/${encodeURIComponent(
-            selectedItem
-          )}?optionId=${selectedOptionId}`
-        );
-      } else {
-        router.push(`/item/${encodeURIComponent(selectedItem)}`);
-      }
+      // POST 요청으로 변경
+      router.push(`/item/${encodeURIComponent(selectedItem)}`);
     }
   };
 
@@ -186,10 +181,10 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
 
   // 옵션이 하나라도 선택되었는지 확인
   const hasSelectedOptions =
-    starForce !== "" ||
-    potentialOption !== "" ||
-    additionalPotentialOption !== "" ||
-    statType !== "" ||
+    starForce.length > 0 ||
+    potentialOption.length > 0 ||
+    additionalPotentialOption.length > 0 ||
+    statType.length > 0 ||
     enchantedFlag;
 
   return (
@@ -209,24 +204,30 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
               clearTimeout(debounceTimer);
             }
 
-            // 1글자 미만이면 자동완성 숨기기
-            if (newValue.length < 1) {
+            // 2글자 미만이면 자동완성 숨기기
+            if (newValue.length < 2) {
               setSuggestions([]);
               setShowSuggestions(false);
               return;
             }
 
-            // 0.1초 디바운스 설정
+            // 0.5초 디바운스 설정
             const timer = setTimeout(() => {
               fetchSuggestions(newValue);
-            }, 100);
+            }, 500);
 
             setDebounceTimer(timer);
           }}
           className="mini-search-input"
           onKeyDown={(e) => {
             // 자동완성 목록이 표시되지 않은 경우 처리하지 않음
-            if (!showSuggestions || suggestions.length === 0) return;
+            if (!showSuggestions || suggestions.length === 0) {
+              // 엔터키 처리 - 일반 검색
+              if (e.key === "Enter") {
+                handleSearch();
+              }
+              return;
+            }
 
             // 위 화살표 키
             if (e.key === "ArrowUp") {
@@ -243,9 +244,13 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
               );
             }
             // Enter 키
-            else if (e.key === "Enter" && selectedSuggestionIndex >= 0) {
+            else if (e.key === "Enter") {
               e.preventDefault(); // 폼 제출 방지
-              handleItemSelect(suggestions[selectedSuggestionIndex]);
+              if (selectedSuggestionIndex >= 0) {
+                handleItemSelect(suggestions[selectedSuggestionIndex]);
+              } else {
+                handleSearch();
+              }
             }
           }}
         />
@@ -262,15 +267,9 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
         </button>
 
         <button
-          className={`mini-search-button ${
-            !selectedItem || (selectedItem && !selectedOptionId)
-              ? "opacity-50"
-              : ""
-          }`}
+          className={`mini-search-button ${!selectedItem ? "opacity-50" : ""}`}
           onClick={handleSearch}
-          disabled={
-            !selectedItem || (selectedItem && !selectedOptionId) ? true : false
-          }
+          disabled={!selectedItem}
           type="button"
         >
           <Search className="h-4 w-4" />
@@ -305,6 +304,7 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
               marginBottom: "0.75rem",
             }}
           >
+            <h4 className="text-sm font-medium text-white">옵션 선택</h4>
             <div style={{ marginLeft: "auto" }}>
               {hasSelectedOptions && (
                 <button
@@ -333,6 +333,7 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
               )}
             </div>
           </div>
+
           <div className="mini-options-grid">
             <div className="mini-option-item">
               <label htmlFor="mini-star-force" className="mini-option-label">
@@ -345,6 +346,7 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
                 placeholder="선택"
                 mini={true}
                 disabled={enchantedFlag}
+                multiple={true}
               />
             </div>
 
@@ -359,6 +361,7 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
                 placeholder="선택"
                 mini={true}
                 disabled={enchantedFlag}
+                multiple={true}
               />
             </div>
 
@@ -376,6 +379,7 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
                 placeholder="선택"
                 mini={true}
                 disabled={enchantedFlag}
+                multiple={true}
               />
             </div>
 
@@ -393,6 +397,7 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
                 placeholder="선택"
                 mini={true}
                 disabled={enchantedFlag}
+                multiple={true}
               />
             </div>
 

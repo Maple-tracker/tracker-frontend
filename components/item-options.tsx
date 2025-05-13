@@ -3,14 +3,13 @@
 import { useEffect } from "react";
 import { CustomSelect } from "./custom-select";
 import { useItemOptions, type ItemOptionsData } from "@/hooks/use-item-options";
-import { RefreshCw } from "lucide-react";
 
 type ItemOptionsProps = {
   isActive: boolean;
   itemName: string | null;
   availableOptions: ItemOptionsData | null;
   isLoading: boolean;
-  onOptionSelect: (optionId: string | null) => void;
+  onOptionSelect: (optionIds: string[]) => void;
 };
 
 export function ItemOptions({
@@ -26,7 +25,7 @@ export function ItemOptions({
     additionalPotentialOption,
     statType,
     enchantedFlag,
-    selectedOptionId,
+    selectedOptionIds,
     handleStarForceChange,
     handlePotentialOptionChange,
     handleAdditionalPotentialOptionChange,
@@ -42,8 +41,8 @@ export function ItemOptions({
 
   // 선택된 옵션 ID가 변경될 때마다 부모 컴포넌트에 알림
   useEffect(() => {
-    onOptionSelect(selectedOptionId);
-  }, [selectedOptionId, onOptionSelect]);
+    onOptionSelect(selectedOptionIds);
+  }, [selectedOptionIds, onOptionSelect]);
 
   // 옵션 데이터 포맷팅
   const starForceOptions = getAvailableStarForceOptions();
@@ -53,10 +52,10 @@ export function ItemOptions({
 
   // 옵션이 하나라도 선택되었는지 확인
   const hasSelectedOptions =
-    starForce !== "" ||
-    potentialOption !== "" ||
-    additionalPotentialOption !== "" ||
-    statType !== "" ||
+    starForce.length > 0 ||
+    potentialOption.length > 0 ||
+    additionalPotentialOption.length > 0 ||
+    statType.length > 0 ||
     enchantedFlag;
 
   return (
@@ -117,6 +116,7 @@ export function ItemOptions({
             onChange={handleStarForceChange}
             placeholder="스타포스 선택"
             disabled={!isActive || isLoading || enchantedFlag}
+            multiple={true}
           />
         </div>
 
@@ -130,6 +130,7 @@ export function ItemOptions({
             onChange={handleStatTypeChange}
             placeholder="스탯타입 선택"
             disabled={!isActive || isLoading || enchantedFlag}
+            multiple={true}
           />
         </div>
 
@@ -143,6 +144,7 @@ export function ItemOptions({
             onChange={handlePotentialOptionChange}
             placeholder="잠재능력 % 선택"
             disabled={!isActive || isLoading || enchantedFlag}
+            multiple={true}
           />
         </div>
 
@@ -159,12 +161,12 @@ export function ItemOptions({
             onChange={handleAdditionalPotentialOptionChange}
             placeholder="에디셔널 잠재능력 선택"
             disabled={!isActive || isLoading || enchantedFlag}
+            multiple={true}
           />
         </div>
       </div>
 
       <br></br>
-
       <div className="mt-6">
         <div className="flex items-center justify-center h-full">
           <div className="flex flex-col items-center">
@@ -186,10 +188,47 @@ export function ItemOptions({
               >
                 <div className="toggle-switch-slider"></div>
               </div>
+              <span className="ml-3 text-sm font-medium text-white"></span>
             </div>
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        .toggle-switch-container {
+          display: flex;
+          align-items: center;
+        }
+        .toggle-switch {
+          position: relative;
+          width: 44px;
+          height: 24px;
+          background-color: #374151;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: background-color 0.3s;
+        }
+        .toggle-switch-on {
+          background-color: #8b5cf6;
+        }
+        .toggle-switch-disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .toggle-switch-slider {
+          position: absolute;
+          top: 2px;
+          left: 2px;
+          width: 20px;
+          height: 20px;
+          background-color: white;
+          border-radius: 50%;
+          transition: transform 0.3s;
+        }
+        .toggle-switch-on .toggle-switch-slider {
+          transform: translateX(20px);
+        }
+      `}</style>
     </div>
   );
 }

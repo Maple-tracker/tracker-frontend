@@ -1161,6 +1161,23 @@ body {
   font-weight: 500;
 }
 
+/* 커스텀 드롭다운 스타일 추가 */
+.custom-dropdown-option-content {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.custom-dropdown-combination-info {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* 미니 드롭다운 스타일 */
 .custom-dropdown-container.mini .custom-dropdown-header {
   padding: 0.25rem 0.5rem;
@@ -1757,4 +1774,20 @@ body {
   text-align: center;
   margin-top: 0.5rem;
   font-style: italic;
+}
+
+/* 옵션 태그 그룹 스타일 추가 */
+.option-tag-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  background-color: rgba(26, 26, 46, 0.3);
+  border: 1px solid rgba(60, 27, 153, 0.2);
+}
+
+.option-tag-group:not(:last-child) {
+  margin-bottom: 0.5rem;
 }
