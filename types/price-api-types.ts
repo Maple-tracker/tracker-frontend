@@ -41,8 +41,8 @@ export type PriceStats = {
 // 아이템 시세 API 응답 타입
 export type ItemPriceResponse = {
   item: ItemBasicInfo;
-  option?: ItemOption | null
-  options: ItemOption[]
+  option?: ItemOption | null;
+  itemOptions: ItemOption[];
   priceStats: PriceStats;
   priceHistory: PriceDataPoint[];
   relatedOptions?: ItemOption[]; // 관련 옵션 목록 (선택적)

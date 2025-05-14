@@ -168,27 +168,46 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
       enchantedFlag,
     };
 
-    // 선택된 옵션에 맞는 조합 필터링
+    // 모든 필수 옵션이 선택되었는지 확인
+    const hasStarForce = selectedOptions.starForce.length > 0;
+    const hasPotentialOption = selectedOptions.potentialOption.length > 0;
+    const hasAdditionalPotentialOption =
+      selectedOptions.additionalPotentialOption.length > 0;
+    const hasStatType = selectedOptions.statType.length > 0;
+
+    // 모든 옵션이 선택되었는지 확인 (enchantedFlag는 선택적)
+    const allOptionsSelected =
+      hasStarForce &&
+      hasPotentialOption &&
+      hasAdditionalPotentialOption &&
+      hasStatType;
+
+    // 모든 옵션이 선택되지 않았으면 빈 배열 반환
+    if (!allOptionsSelected) {
+      setSelectedOptionIds([]);
+      setAvailableCombinations([]);
+      return;
+    }
+
+    // 선택된 옵션에 맞는 조합 필터링 (모든 옵션이 정확히 일치하는 경우만)
     const matchingCombinations = itemOptionsData.combinations.filter(
       (combo) => {
-        const starForceMatch =
-          selectedOptions.starForce.length === 0 ||
-          selectedOptions.starForce.includes(combo.starForce);
-        const potentialMatch =
-          selectedOptions.potentialOption.length === 0 ||
-          selectedOptions.potentialOption.includes(combo.potentialOption);
+        const starForceMatch = selectedOptions.starForce.includes(
+          combo.starForce
+        );
+        const potentialMatch = selectedOptions.potentialOption.includes(
+          combo.potentialOption
+        );
         const additionalMatch =
-          selectedOptions.additionalPotentialOption.length === 0 ||
           selectedOptions.additionalPotentialOption.includes(
             combo.additionalPotentialOption
           );
-        const statTypeMatch =
-          selectedOptions.statType.length === 0 ||
-          selectedOptions.statType.includes(combo.statType);
+        const statTypeMatch = selectedOptions.statType.includes(combo.statType);
         const enchantedMatch =
           !selectedOptions.enchantedFlag ||
           combo.enchantedFlag === selectedOptions.enchantedFlag;
 
+        // 모든 조건이 일치해야 함 (AND 조건)
         return (
           starForceMatch &&
           potentialMatch &&

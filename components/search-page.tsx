@@ -48,86 +48,6 @@ const fetchItemOptions = async (itemName: string) => {
     if (response.ok) {
       return await response.json();
     }
-
-    //목업 데이터 - 실제 API 연결 시 제거
-    // return {
-    //   combinations: [
-    //     {
-    //       id: "opt1",
-    //       starForce: "0성",
-    //       upperPotential: "3%",
-    //       lowerPotentialGrade: "레어",
-    //       statType: "STR",
-    //       hasNoDrag: false,
-    //     },
-    //     {
-    //       id: "opt2",
-    //       starForce: "10성",
-    //       upperPotential: "6%",
-    //       lowerPotentialGrade: "에픽",
-    //       statType: "DEX",
-    //       hasNoDrag: false,
-    //     },
-    //     {
-    //       id: "opt3",
-    //       starForce: "15성",
-    //       upperPotential: "9%",
-    //       lowerPotentialGrade: "유니크",
-    //       statType: "INT",
-    //       hasNoDrag: true,
-    //     },
-    //     {
-    //       id: "opt4",
-    //       starForce: "17성",
-    //       upperPotential: "12%",
-    //       lowerPotentialGrade: "레전더리",
-    //       statType: "LUK",
-    //       hasNoDrag: true,
-    //     },
-    //     {
-    //       id: "opt5",
-    //       starForce: "20성",
-    //       upperPotential: "15%",
-    //       lowerPotentialGrade: "레어",
-    //       statType: "올스탯",
-    //       hasNoDrag: false,
-    //     },
-    //     {
-    //       id: "opt6",
-    //       starForce: "22성",
-    //       upperPotential: "18%",
-    //       lowerPotentialGrade: "에픽",
-    //       statType: "STR",
-    //       hasNoDrag: true,
-    //     },
-    //     {
-    //       id: "opt7",
-    //       starForce: "25성",
-    //       upperPotential: "21%",
-    //       lowerPotentialGrade: "유니크",
-    //       statType: "DEX",
-    //       hasNoDrag: false,
-    //     },
-    //   ],
-    //   availableOptions: {
-    //     starForce: ["0성", "10성", "15성", "17성", "20성", "22성", "25성"],
-    //     upperPotential: [
-    //       "3%",
-    //       "6%",
-    //       "9%",
-    //       "12%",
-    //       "15%",
-    //       "18%",
-    //       "21%",
-    //       "24%",
-    //       "27%",
-    //       "30%",
-    //     ],
-    //     lowerPotentialGrade: ["레어", "에픽", "유니크", "레전더리"],
-    //     statType: ["STR", "DEX", "INT", "LUK", "올스탯"],
-    //     hasNoDrag: true,
-    //   },
-    // };
   } catch (error) {
     console.error("아이템 옵션 정보 가져오기 실패:", error);
     return null;
@@ -146,6 +66,7 @@ export function SearchPage() {
   );
   const [itemOptions, setItemOptions] = useState<any>(null);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const router = useRouter();
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(
     null
@@ -212,10 +133,30 @@ export function SearchPage() {
   };
 
   // 검색 버튼 클릭 핸들러
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (selectedItem) {
       // 아이템 검색 모드
-      router.push(`/item/${encodeURIComponent(selectedItem)}`);
+      try {
+        setIsSearching(true);
+        // 선택된 옵션 ID를 로컬 스토리지에 저장
+        if (selectedOptionIds.length > 0) {
+          localStorage.setItem(
+            `optionIds_${selectedItem}`,
+            JSON.stringify(selectedOptionIds)
+          );
+          // 아이템 상세 페이지로 이동
+          router.push(`/item/${encodeURIComponent(selectedItem)}`);
+        } else {
+          alert(
+            "모든 필수 옵션(스타포스, 잠재능력, 에디셔널 잠재능력, 스탯타입)을 선택해주세요."
+          );
+        }
+      } catch (error) {
+        console.error("검색 중 오류 발생:", error);
+        // 오류 처리 (예: 토스트 메시지 표시)
+      } finally {
+        setIsSearching(false);
+      }
     } else if (searchQuery.trim()) {
       // 캐릭터 검색 모드
       if (isItemSearch) {
@@ -381,19 +322,6 @@ export function SearchPage() {
             )}
             <Search className="search-icon" />
           </div>
-          <button
-            className="search-button"
-            onClick={handleSearch}
-            type="button"
-          >
-            {isItemSearch ? (
-              <>옵션 검색</>
-            ) : (
-              <>
-                <Search className="mr-2 h-4 w-4" />
-              </>
-            )}
-          </button>
         </div>
 
         {/* 아이템 검색 옵션 패널 */}
@@ -418,7 +346,7 @@ export function SearchPage() {
                           : ""
                       }`}
                       onClick={handleSearch}
-                      disabled={selectedOptionIds.length !== 0 && isItemSearch}
+                      disabled={selectedOptionIds.length === 0 && isItemSearch}
                       type="button"
                     >
                       <Search className="mr-2 h-5 w-5" />

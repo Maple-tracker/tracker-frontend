@@ -11,13 +11,16 @@ const fetchAutocompleteSuggestions = async (query: string) => {
   if (query.length < 2) return [];
 
   try {
-    const response = await fetch("/api/autocomplete", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ input: query }),
-    });
+    const response = await fetch(
+      "https://dev.maplemarket.today/api/autocomplete",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ input: query }),
+      }
+    );
 
     if (response.ok) {
       const data = await response.json();
@@ -35,30 +38,18 @@ const fetchAutocompleteSuggestions = async (query: string) => {
 // 아이템 옵션 정보 가져오기
 const fetchItemOptions = async (itemName: string) => {
   try {
-    // API 호출
-    const response = await fetch("/api/item-options", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ itemName }),
-    });
-
-    // 404 오류 처리
-    if (response.status === 404) {
-      const errorData = await response.json();
-      throw new Error(
-        errorData.error || "해당 아이템 시세 데이터가 존재하지 않습니다."
-      );
+    // 실제 API 호출 (현재는 목업 데이터 반환)
+    const response = await fetch(
+      `https://dev.maplemarket.today/api/item_name/options?name=${encodeURIComponent(
+        itemName
+      )}`
+    );
+    if (response.ok) {
+      return await response.json();
     }
-
-    if (!response.ok) {
-      throw new Error("아이템 옵션 정보를 가져오는 중 오류가 발생했습니다.");
-    }
-
-    return await response.json();
   } catch (error) {
-    throw error;
+    console.error("아이템 옵션 정보 가져오기 실패:", error);
+    return null;
   }
 };
 
@@ -78,6 +69,7 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
   );
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   const router = useRouter();
 
@@ -166,10 +158,35 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
     }
   };
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (selectedItem) {
-      // POST 요청으로 변경
-      router.push(`/item/${encodeURIComponent(selectedItem)}`);
+      // 선택된 옵션 ID가 있는 경우, 쿼리 파라미터로 추가
+      try {
+        setIsSearching(true);
+        // 선택된 옵션 ID가 있는 경우에만 검색 진행
+        if (selectedOptionIds.length > 0) {
+          // 선택된 옵션 ID를 로컬 스토리지에 저장
+          localStorage.setItem(
+            `optionIds_${selectedItem}`,
+            JSON.stringify(selectedOptionIds)
+          );
+
+          // 아이템 상세 페이지로 이동
+          router.push(`/item/${encodeURIComponent(selectedItem)}`);
+        } else {
+          // 옵션이 선택되지 않았을 때 알림 (실제 구현에서는 토스트 메시지 등으로 대체 가능)
+          alert(
+            "모든 필수 옵션(스타포스, 잠재능력, 에디셔널 잠재능력, 스탯타입)을 선택해주세요."
+          );
+        }
+        // 아이템 상세 페이지로 이동
+        router.push(`/item/${encodeURIComponent(selectedItem)}`);
+      } catch (error) {
+        console.error("검색 중 오류 발생:", error);
+        // 오류 처리 (예: 토스트 메시지 표시)
+      } finally {
+        setIsSearching(false);
+      }
     }
   };
 

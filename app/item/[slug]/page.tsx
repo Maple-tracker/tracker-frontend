@@ -1,15 +1,10 @@
-import { PriceGraph } from "@/components/price-graph";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { StarsBackground } from "@/components/stars-background";
-import { ItemSearchMini } from "@/components/item-search-mini";
 import type { ItemPriceResponse } from "@/types/price-api-types";
+import ClientWrapper from "./client-wrapper";
+import ItemDetailContent from "./item-detail-content";
 
 // 아이템 데이터 가져오기
-async function getItemData(
-  slug: string,
-  optionIds?: string[]
-): Promise<ItemPriceResponse> {
+async function getItemData(slug: string): Promise<ItemPriceResponse> {
   // 서버 컴포넌트에서 API 호출
   // URL 인코딩된 slug를 디코딩하여 원래 한글 아이템명으로 복원
   const decodedSlug = decodeURIComponent(slug);
@@ -17,7 +12,6 @@ async function getItemData(
 
   try {
     console.log(`API 요청 URL: ${apiUrl}`); // 디버깅용 로그 추가
-    console.log(`선택된 옵션 IDs:`, optionIds); // 디버깅용 로그 추가
 
     // POST 요청으로 변경
     const response = await fetch(apiUrl, {
@@ -26,9 +20,8 @@ async function getItemData(
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ optionIds: optionIds || [] }),
+      body: JSON.stringify({ optionIds: [] }),
       next: { revalidate: 3600 }, // 1시간마다 재검증
-      cache: "no-store", // 캐시 사용 안 함
     });
 
     if (!response.ok) {
@@ -55,7 +48,7 @@ async function getItemData(
         tradable: false,
       },
       option: null,
-      options: [],
+      itemOptions: [],
       priceStats: {
         currentPrice: 0,
         averagePrice: 0,
@@ -82,154 +75,15 @@ export default async function ItemPage({
 }: ItemPageProps) {
   // params와 searchParams를 await로 접근
   const { slug } = await params;
-  const resolvedSearchParams = await searchParams;
-
-  // 옵션 ID 배열로 변환
-  let optionIds: string[] = [];
-
-  // searchParams에서 optionIds 추출
-  if (resolvedSearchParams.optionIds) {
-    if (Array.isArray(resolvedSearchParams.optionIds)) {
-      optionIds = resolvedSearchParams.optionIds as string[];
-    } else {
-      optionIds = [resolvedSearchParams.optionIds as string];
-    }
-  }
-
-  // 이전 버전과의 호환성을 위해 optionId도 확인
-  if (resolvedSearchParams.optionId && optionIds.length === 0) {
-    if (Array.isArray(resolvedSearchParams.optionId)) {
-      optionIds = resolvedSearchParams.optionId as string[];
-    } else {
-      optionIds = [resolvedSearchParams.optionId as string];
-    }
-  }
 
   // 비동기 데이터 가져오기
-  const itemData = await getItemData(slug, optionIds);
+  const initialData = await getItemData(slug);
 
   return (
     <div className="magical-gradient">
       <div className="aurora-gradient animate-aurora"></div>
       <StarsBackground />
-
-      <div className="container mx-auto px-4 py-8 relative z-10">
-        <div className="item-page-header">
-          <Link href="/" className="back-button">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            검색으로 돌아가기
-          </Link>
-
-          <ItemSearchMini currentItemName={itemData.item.name} />
-        </div>
-
-        <div className="item-details-card">
-          <div className="item-header">
-            <div className="flex items-start">
-              <div className="w-16 h-16 bg-purple-900/50 rounded-md flex items-center justify-center mr-4">
-                <img
-                  src={itemData.item.imageUrl || "/placeholder.svg"}
-                  alt={itemData.item.name}
-                  className="w-12 h-12 object-contain"
-                />
-              </div>
-              <div>
-                <h1 className="item-title">{itemData.item.name}</h1>
-                <p className="item-update-time">
-                  마지막 업데이트:{" "}
-                  {new Date(itemData.priceStats.lastUpdated).toLocaleString()}
-                </p>
-                {/* 다수의 옵션 표시 */}
-                {itemData.options && itemData.options.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {itemData.options.map((option, index) => (
-                      <div
-                        key={option.id || index}
-                        className="option-tag-group"
-                      >
-                        <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                          {option.starForce}
-                        </span>
-                        <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                          {option.potentialOption} {option.statType}
-                        </span>
-                        <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                          {option.additionalPotentialOption} 에디셔널
-                        </span>
-                        {option.enchantedFlag && (
-                          <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                            노작
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* 이전 버전과의 호환성을 위해 단일 옵션도 처리 */}
-                {!itemData.options?.length && itemData.option && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                      {itemData.option.starForce}
-                    </span>
-                    <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                      {itemData.option.potentialOption}{" "}
-                      {itemData.option.statType}
-                    </span>
-                    <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                      {itemData.option.additionalPotentialOption} 에디셔널
-                    </span>
-                    {itemData.option.enchantedFlag && (
-                      <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                        노작
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="item-price">
-              <div className="current-price">
-                {itemData.priceStats.currentPrice.toLocaleString()} 메소
-              </div>
-              <div
-                className={`price-change ${
-                  itemData.priceStats.priceChange >= 0 ? "positive" : "negative"
-                }`}
-              >
-                {itemData.priceStats.priceChange >= 0 ? "+" : ""}
-                {itemData.priceStats.priceChange.toLocaleString()} 메소 (
-                {itemData.priceStats.priceChange >= 0 ? "+" : ""}
-                {itemData.priceStats.priceChangePercentage.toFixed(2)}%)
-              </div>
-            </div>
-          </div>
-
-          <div className="price-summary">
-            <div className="price-summary-item">
-              <div className="summary-label">평균 가격 (30일)</div>
-              <div className="summary-value">
-                {itemData.priceStats.averagePrice.toLocaleString()} 메소
-              </div>
-            </div>
-            <div className="price-summary-item">
-              <div className="summary-label">최저 가격 (30일)</div>
-              <div className="summary-value">
-                {itemData.priceStats.lowestPrice.toLocaleString()} 메소
-              </div>
-            </div>
-            <div className="price-summary-item">
-              <div className="summary-label">최고 가격 (30일)</div>
-              <div className="summary-value">
-                {itemData.priceStats.highestPrice.toLocaleString()} 메소
-              </div>
-            </div>
-          </div>
-
-          <PriceGraph priceHistory={itemData.priceHistory} />
-        </div>
-      </div>
+      <ClientWrapper slug={slug} initialData={initialData} />
     </div>
   );
 }
