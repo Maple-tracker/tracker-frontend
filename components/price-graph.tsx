@@ -52,7 +52,12 @@ export function PriceGraph({ priceHistory }: PriceGraphProps) {
   })();
 
   // 필터링된 데이터가 없는 경우 모든 데이터 표시
-  const dataToDisplay = filteredData.length > 0 ? filteredData : priceHistory;
+  let dataToDisplay = filteredData.length > 0 ? filteredData : priceHistory;
+
+  // 데이터를 날짜 오름차순으로 정렬 (오래된 날짜 -> 최신 날짜)
+  dataToDisplay = [...dataToDisplay].sort((a, b) => {
+    return new Date(a.date).getTime() - new Date(b.date).getTime();
+  });
 
   // 캔들 차트를 위한 데이터 가공 및 전일 대비 등락 계산
   const processedData = dataToDisplay.map((point, index, array) => {

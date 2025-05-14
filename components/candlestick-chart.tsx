@@ -63,17 +63,42 @@ export function CandlestickChart({
     canvas.height = containerSize.height;
 
     // 차트 영역 설정
-    const padding = { top: 20, right: 50, bottom: 30, left: 60 };
+    const padding = { top: 20, right: 50, bottom: 30, left: 100 };
     const chartWidth = containerSize.width - padding.left - padding.right;
     const chartHeight = containerSize.height - padding.top - padding.bottom;
+
+    // 캔들 색상 테마 정의
+    const candleTheme = {
+      rising: {
+        body: "#00c853", // 더 선명한 녹색
+        border: "#00e676", // 밝은 녹색 테두리
+        wick: "#69f0ae", // 심지(wick) 색상
+        average: "#ffffff", // 평균가 선 색상
+      },
+      falling: {
+        body: "#d50000", // 더 선명한 빨간색
+        border: "#ff1744", // 밝은 빨간색 테두리
+        wick: "#ff5252", // 심지(wick) 색상
+        average: "#ffffff", // 평균가 선 색상
+      },
+      hover: {
+        border: "#ffffff", // 호버 테두리 색상
+        shadow: "rgba(255, 255, 255, 0.3)", // 호버 그림자 색상
+      },
+      grid: {
+        line: "rgba(80, 80, 120, 0.2)", // 그리드 선 색상
+        text: "#b0bec5", // 그리드 텍스트 색상
+      },
+      background: "rgba(15, 15, 30, 0.4)", // 배경 색상
+    };
 
     // 데이터가 없거나 너무 적은 경우 처리
     if (!data || data.length === 0) {
       // 데이터가 없는 경우 메시지 표시
-      ctx.fillStyle = "rgba(15, 15, 26, 0.3)";
+      ctx.fillStyle = candleTheme.background;
       ctx.fillRect(0, 0, containerSize.width, containerSize.height);
 
-      ctx.fillStyle = "#9CA3AF";
+      ctx.fillStyle = candleTheme.grid.text;
       ctx.font = "14px Arial";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -94,27 +119,33 @@ export function CandlestickChart({
     const priceRange =
       maxPrice - minPrice > 0 ? maxPrice - minPrice : maxPrice * 0.1;
 
-    // 가격 -> Y좌표 변환 함수
+    // Y축 범위 설정 - 최소값을 0으로 설정
+    const adjustedMinPrice = 0; // 최소값을 0으로 설정
+    const paddingTop = priceRange * 0.05; // 위쪽에 5% 여유 공간
+    const adjustedMaxPrice = Math.max(maxPrice + paddingTop, minPrice * 1.05); // 최대값 조정
+    const adjustedPriceRange = adjustedMaxPrice - adjustedMinPrice;
+
+    // 가격 -> Y좌표 변환 함수 (수정된 범위 사용)
     const priceToY = (price: number) => {
       return (
         padding.top +
         chartHeight -
-        ((price - minPrice) / priceRange) * chartHeight
+        ((price - adjustedMinPrice) / adjustedPriceRange) * chartHeight
       );
     };
 
     // 배경 그리기
-    ctx.fillStyle = "rgba(15, 15, 26, 0.3)";
+    ctx.fillStyle = candleTheme.background;
     ctx.fillRect(0, 0, containerSize.width, containerSize.height);
 
     // 그리드 그리기
-    ctx.strokeStyle = "rgba(51, 51, 51, 0.2)";
+    ctx.strokeStyle = candleTheme.grid.line;
     ctx.lineWidth = 0.5;
 
     // 수평 그리드
-    const priceStep = priceRange / 5;
+    const priceStep = adjustedPriceRange / 5;
     for (let i = 0; i <= 5; i++) {
-      const price = minPrice + i * priceStep;
+      const price = adjustedMinPrice + i * priceStep;
       const y = priceToY(price);
       ctx.beginPath();
       ctx.moveTo(padding.left, y);
@@ -122,65 +153,42 @@ export function CandlestickChart({
       ctx.stroke();
 
       // 가격 레이블
-      ctx.fillStyle = "#9CA3AF";
+      ctx.fillStyle = candleTheme.grid.text;
       ctx.font = "10px Arial";
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
-      ctx.fillText(formatPrice(price), padding.left - 5, y);
+      // 숫자 길이에 따라 패딩 조정
+      const priceText = formatPrice(price);
+      const textPadding = Math.min(5 + priceText.length * 1.5, 15);
+      ctx.fillText(priceText, padding.left - textPadding, y);
     }
 
-    // 수직 그리드 및 날짜 레이블
-    // 데이터 포인트가 하나인 경우 특별 처리
-    if (data.length === 1) {
-      const x = padding.left + chartWidth / 2;
-      ctx.beginPath();
-      ctx.moveTo(x, padding.top);
-      ctx.lineTo(x, containerSize.height - padding.bottom);
-      ctx.stroke();
+    // 데이터를 날짜 오름차순으로 정렬 (오래된 날짜 -> 최신 날짜)
+    const sortedData = [...data].sort((a, b) => {
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
 
-      // 날짜 레이블
-      const date = new Date(data[0].date);
-      const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
-      ctx.fillStyle = "#9CA3AF";
-      ctx.font = "10px Arial";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      ctx.fillText(dateStr, x, containerSize.height - padding.bottom + 5);
-    } else {
-      const dateStep = Math.max(1, Math.floor(data.length / 10));
-      for (let i = 0; i < data.length; i += dateStep) {
-        const x = padding.left + (i / (data.length - 1)) * chartWidth;
-        ctx.beginPath();
-        ctx.moveTo(x, padding.top);
-        ctx.lineTo(x, containerSize.height - padding.bottom);
-        ctx.stroke();
-
-        // 날짜 레이블
-        const date = new Date(data[i].date);
-        const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
-        ctx.fillStyle = "#9CA3AF";
-        ctx.font = "10px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        ctx.fillText(dateStr, x, containerSize.height - padding.bottom + 5);
-      }
-    }
+    // 정렬된 데이터로 작업
+    data = sortedData;
 
     // 캔들스틱 그리기
-    const candleWidth = Math.min(
-      12,
-      chartWidth / Math.max(data.length, 1) / 1.5
-    ); // 더 굵은 캔들로 변경
+    // 데이터 포인트 수에 관계없이 일정한 간격 유지
+    const maxCandleWidth = 12; // 최대 캔들 너비
+    const minCandleSpacing = 4; // 캔들 사이 최소 간격
+    const totalCandlesWidth =
+      data.length * maxCandleWidth + (data.length - 1) * minCandleSpacing;
+    const scaleFactor =
+      totalCandlesWidth > chartWidth ? chartWidth / totalCandlesWidth : 1;
+    const candleWidth = Math.min(maxCandleWidth, maxCandleWidth * scaleFactor); // 조정된 캔들 너비
+    const candleSpacing = Math.max(
+      minCandleSpacing * scaleFactor,
+      minCandleSpacing
+    ); // 조정된 간격
 
     data.forEach((d, i) => {
-      // 데이터 포인트가 하나인 경우 중앙에 배치
-      let x;
-      if (data.length === 1) {
-        x = padding.left + chartWidth / 2;
-      } else {
-        x = padding.left + (i / (data.length - 1)) * chartWidth;
-      }
-
+      // 데이터 포인트 수에 관계없이 균등한 간격으로 배치
+      const x =
+        padding.left + i * (candleWidth + candleSpacing) + candleWidth / 2;
       const candleX = x - candleWidth / 2;
 
       const highY = priceToY(d.highPrice);
@@ -191,15 +199,31 @@ export function CandlestickChart({
 
       // 상승/하락 여부 결정 (이전 데이터와 비교)
       const isRising = i > 0 ? d.price >= data[i - 1].price : true;
-      const candleColor = isRising ? "#4ade80" : "#f87171";
+      const theme = isRising ? candleTheme.rising : candleTheme.falling;
 
-      // 캔들 실체(body) 그리기 - 최고가에서 최저가까지의 굵은 막대
-      ctx.fillStyle = candleColor;
-      ctx.fillRect(candleX, highY, candleWidth, lowY - highY);
+      // 캔들 심지(wick) 그리기 - 최고가에서 최저가까지의 선
+      ctx.strokeStyle = theme.wick;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, highY);
+      ctx.lineTo(x, lowY);
+      ctx.stroke();
+
+      // 캔들 실체(body) 그리기 - 각 캔들의 실제 최고가와 최저가 위치에 그리기
+      const bodyHeight = Math.max(lowY - highY, 1); // 최소 1px 높이 보장
+
+      // 캔들 내부 채우기
+      ctx.fillStyle = theme.body;
+      ctx.fillRect(candleX, highY, candleWidth, bodyHeight);
+
+      // 캔들 테두리 그리기
+      ctx.strokeStyle = theme.border;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(candleX, highY, candleWidth, bodyHeight);
 
       // 평균가 표시 (작은 선으로)
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = theme.average;
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(candleX, avgY);
       ctx.lineTo(candleX + candleWidth, avgY);
@@ -207,27 +231,25 @@ export function CandlestickChart({
 
       // 호버 효과
       if (i === hoveredIndex) {
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(
-          candleX - 1,
-          highY - 1,
-          candleWidth + 2,
-          lowY - highY + 2
-        );
+        // 그림자 효과
+        ctx.shadowColor = candleTheme.hover.shadow;
+        ctx.shadowBlur = 8;
+
+        // 테두리 강조
+        ctx.strokeStyle = candleTheme.hover.border;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(candleX - 1, highY - 1, candleWidth + 2, bodyHeight + 2);
+
+        // 그림자 효과 초기화
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
       }
     });
 
-    // 가격 포맷 함수
+    // 가격 포맷 함수 - 단위 변환 없이 천 단위 콤마만 적용
     function formatPrice(price: number) {
-      if (price >= 1000000000) {
-        return `${(price / 1000000000).toFixed(1)}B`;
-      } else if (price >= 1000000) {
-        return `${(price / 1000000).toFixed(1)}M`;
-      } else if (price >= 1000) {
-        return `${(price / 1000).toFixed(1)}K`;
-      }
-      return price.toString();
+      // 소수점 이하 숫자 제거하고 천 단위 콤마 적용
+      return Math.round(price).toLocaleString();
     }
   }, [data, containerSize, hoveredIndex]);
 
@@ -245,38 +267,49 @@ export function CandlestickChart({
     // 마우스 위치 저장 (툴팁 위치 계산용)
     setMousePosition({ x: e.clientX, y: e.clientY });
 
-    // 차트 영역 설정
-    const padding = { top: 20, right: 50, bottom: 30, left: 60 };
-    const chartWidth = rect.width - padding.left - padding.right;
+    // 차트 영역 설정 - 캔버스 그리기와 동일한 패딩 사용
+    const padding = { top: 20, right: 50, bottom: 30, left: 100 };
 
-    // 데이터 포인트가 하나인 경우 특별 처리
-    if (data.length === 1) {
-      const centerX = padding.left + chartWidth / 2;
-      // 중앙 근처에 마우스가 있으면 첫 번째 데이터 포인트 선택
-      if (Math.abs(x - centerX) < 20) {
-        setHoveredIndex(0);
-        if (onHover) {
-          onHover(data[0], 0);
-        }
-      } else {
-        setHoveredIndex(null);
-      }
+    // 캔들 위치 계산에 사용된 것과 동일한 로직 적용
+    const maxCandleWidth = 12;
+    const minCandleSpacing = 4;
+    const chartWidth = rect.width - padding.left - padding.right;
+    const totalCandlesWidth =
+      data.length * maxCandleWidth + (data.length - 1) * minCandleSpacing;
+    const scaleFactor =
+      totalCandlesWidth > chartWidth ? chartWidth / totalCandlesWidth : 1;
+    const candleWidth = Math.min(maxCandleWidth, maxCandleWidth * scaleFactor);
+    const candleSpacing = Math.max(
+      minCandleSpacing * scaleFactor,
+      minCandleSpacing
+    );
+
+    // 마우스 위치에 해당하는 데이터 인덱스 계산
+    // 수정된 캔들 위치 계산 로직에 맞게 업데이트
+    if (x < padding.left || x > rect.width - padding.right) {
+      setHoveredIndex(null);
       return;
     }
 
-    // 마우스 위치에 해당하는 데이터 인덱스 계산
-    const dataIndex = Math.round(
-      ((x - padding.left) / chartWidth) * (data.length - 1)
-    );
+    const relativeX = x - padding.left;
+    const candleAndSpacingWidth = candleWidth + candleSpacing;
+    const index = Math.floor(relativeX / candleAndSpacingWidth);
 
-    if (dataIndex >= 0 && dataIndex < data.length) {
-      setHoveredIndex(dataIndex);
-      if (onHover) {
-        onHover(data[dataIndex], dataIndex);
+    if (index >= 0 && index < data.length) {
+      // 캔들 중앙 위치 계산
+      const candleCenterX =
+        padding.left + index * candleAndSpacingWidth + candleWidth / 2;
+      // 마우스가 캔들 주변에 있는지 확인 (캔들 너비의 1.5배 범위 내)
+      if (Math.abs(x - candleCenterX) <= candleWidth * 1.5) {
+        setHoveredIndex(index);
+        if (onHover) {
+          onHover(data[index], index);
+        }
+        return;
       }
-    } else {
-      setHoveredIndex(null);
     }
+
+    setHoveredIndex(null);
   };
 
   const handleMouseLeave = () => {
