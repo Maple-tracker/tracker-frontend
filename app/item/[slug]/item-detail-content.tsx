@@ -20,6 +20,7 @@ export default function ItemDetailContent({
       <div className="item-page-header">
         <Link href="/" className="back-button">
           <ArrowLeft className="mr-2 h-4 w-4" />
+          검색으로 돌아가기
         </Link>
 
         <ItemSearchMini currentItemName={itemData.item.name} />
@@ -28,14 +29,14 @@ export default function ItemDetailContent({
       <div className="item-details-card">
         <div className="item-header">
           <div className="flex items-start">
-            <div className="w-16 h-16 bg-purple-900/50 rounded-md flex items-center justify-center mr-4">
+            <div className="item-image-container mr-4">
               <img
                 src={
                   itemData.item.imageUrl ||
                   "/placeholder.svg?height=64&width=64"
                 }
                 alt={itemData.item.name}
-                className="w-12 h-12 object-contain"
+                className="item-image"
               />
             </div>
             <div>
@@ -45,49 +46,61 @@ export default function ItemDetailContent({
                 {new Date(itemData.priceStats.lastUpdated).toLocaleString()}
               </p>
 
-              {/* 다수의 옵션 표시 */}
-              {itemData.itemOptions && itemData.itemOptions.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {itemData.itemOptions.map((option, index) => (
-                    <div key={option.id || index} className="option-tag-group">
-                      <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                        {option.starForce}
-                      </span>
-                      <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                        {option.potentialOption} {option.statType}
-                      </span>
-                      <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                        {option.additionalPotentialOption} 에디셔널
-                      </span>
-                      {option.enchantedFlag && (
-                        <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                          노작여부
+              {/* 옵션 태그 - 가로 나열 방식 (색상 구분 적용) */}
+              <div className="mt-2">
+                {itemData.itemOptions && itemData.itemOptions.length > 0 ? (
+                  <div className="inline-itemOptions-container">
+                    {itemData.itemOptions.map((option, index) => (
+                      <div
+                        key={option.id || index}
+                        className="inline-option-set"
+                      >
+                        {itemData.itemOptions.length > 1 && (
+                          <span className="inline-option-number">
+                            옵션 {index + 1}
+                          </span>
+                        )}
+                        <div className="inline-tags-wrapper">
+                          <span className="inline-tag tag-starforce">
+                            {option.starForce}
+                          </span>
+                          <span className="inline-tag tag-potential">
+                            {option.potentialOption} {option.statType}
+                          </span>
+                          <span className="inline-tag tag-additional">
+                            {option.additionalPotentialOption}
+                          </span>
+                          {option.enchantedFlag && (
+                            <span className="inline-tag tag-enchant">
+                              인챈트
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : itemData.option ? (
+                  <div className="inline-itemOptions-container">
+                    <div className="inline-option-set">
+                      <div className="inline-tags-wrapper">
+                        <span className="inline-tag tag-starforce">
+                          {itemData.option.starForce}
                         </span>
-                      )}
+                        <span className="inline-tag tag-potential">
+                          {itemData.option.potentialOption}{" "}
+                          {itemData.option.statType}
+                        </span>
+                        <span className="inline-tag tag-additional">
+                          {itemData.option.additionalPotentialOption}
+                        </span>
+                        {itemData.option.enchantedFlag && (
+                          <span className="inline-tag tag-enchant">인챈트</span>
+                        )}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* 이전 버전과의 호환성을 위해 단일 옵션도 처리 */}
-              {!itemData.itemOptions?.length && itemData.option && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                    {itemData.option.starForce}
-                  </span>
-                  <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                    {itemData.option.potentialOption} {itemData.option.statType}
-                  </span>
-                  <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                    {itemData.option.additionalPotentialOption} 에디셔널
-                  </span>
-                  {itemData.option.enchantedFlag && (
-                    <span className="inline-block px-2 py-1 bg-purple-900/30 rounded text-xs text-purple-200">
-                      노작 여부
-                    </span>
-                  )}
-                </div>
-              )}
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
 
