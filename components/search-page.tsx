@@ -72,7 +72,7 @@ export function SearchPage() {
     null
   );
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
-  const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
+  const [selectedOptionIds, setSelectedOptionIds] = useState<number[]>([]);
 
   const fetchSuggestions = useCallback(
     async (query: string) => {
@@ -128,7 +128,7 @@ export function SearchPage() {
   };
 
   // 옵션 선택 핸들러
-  const handleOptionSelect = (optionIds: string[]) => {
+  const handleOptionSelect = (optionIds: number[]) => {
     setSelectedOptionIds(optionIds);
   };
 
@@ -349,8 +349,19 @@ export function SearchPage() {
                       disabled={selectedOptionIds.length === 0 && isItemSearch}
                       type="button"
                     >
-                      <Search className="mr-2 h-5 w-5" />
-                      검색
+                      {isSearching ? (
+                        <>
+                          <div className="spinner mr-2"></div>
+                          검색 중...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="mr-2 h-5 w-5" />
+                          {selectedOptionIds.length > 0
+                            ? `${selectedOptionIds.length}개 옵션으로 검색`
+                            : "검색"}
+                        </>
+                      )}
                     </button>
                   </div>
                 )}

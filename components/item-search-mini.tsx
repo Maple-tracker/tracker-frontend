@@ -81,17 +81,17 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
     statType,
     enchantedFlag,
     selectedOptionIds,
+    activePath,
     handleStarForceChange,
     handlePotentialOptionChange,
     handleAdditionalPotentialOptionChange,
     handleStatTypeChange,
     handleEnchantedFlagChange,
-    getAvailableStarForceOptions,
-    getAvailablePotentialOptions,
-    getAvailableAdditionalPotentialOptions,
-    getAvailableStatTypeOptions,
+    setActivePathValue,
+    getCategoryOptions,
     isEnchantedFlagAvailable,
     resetOptions,
+    selectAllSubOptions,
   } = useItemOptions(itemOptions);
 
   // 컴포넌트 마운트 시 현재 아이템명 설정
@@ -138,7 +138,6 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
   const handleItemSelect = async (itemName: string) => {
     setSearchQuery(itemName);
     setShowSuggestions(false);
-    setSelectedSuggestionIndex(-1); // 선택된 인덱스 초기화
     resetOptions();
 
     setIsLoadingOptions(true);
@@ -158,11 +157,12 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
     }
   };
 
+  // 검색 버튼 클릭 핸들러
   const handleSearch = async () => {
     if (selectedItem) {
-      // 선택된 옵션 ID가 있는 경우, 쿼리 파라미터로 추가
       try {
         setIsSearching(true);
+
         // 선택된 옵션 ID가 있는 경우에만 검색 진행
         if (selectedOptionIds.length > 0) {
           // 선택된 옵션 ID를 로컬 스토리지에 저장
@@ -174,36 +174,43 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
           // 아이템 상세 페이지로 이동
           router.push(`/item/${encodeURIComponent(selectedItem)}`);
         } else {
-          // 옵션이 선택되지 않았을 때 알림 (실제 구현에서는 토스트 메시지 등으로 대체 가능)
+          // 옵션이 선택되지 않았을 때 알림
           alert(
             "모든 필수 옵션(스타포스, 잠재능력, 에디셔널 잠재능력, 스탯타입)을 선택해주세요."
           );
         }
-        // 아이템 상세 페이지로 이동
-        router.push(`/item/${encodeURIComponent(selectedItem)}`);
       } catch (error) {
         console.error("검색 중 오류 발생:", error);
-        // 오류 처리 (예: 토스트 메시지 표시)
       } finally {
         setIsSearching(false);
       }
     }
   };
 
-  // 옵션 데이터 포맷팅
-  const starForceOptions = getAvailableStarForceOptions();
-  const potentialOptions = getAvailablePotentialOptions();
-  const additionalPotentialOptions = getAvailableAdditionalPotentialOptions();
-  const statTypeOptions = getAvailableStatTypeOptions();
+  // 카테고리별 옵션 가져오기
+  const getOptionsForCategory = (categoryId: string) => {
+    return getCategoryOptions(categoryId, activePath).map((option) => ({
+      value: option.value,
+      label: option.label,
+      disabled: option.disabled,
+      combinationInfo: option.combinationInfo,
+    }));
+  };
 
-  // 옵션이 하나라도 선택되었는지 확인
-  const hasSelectedOptions =
-    starForce.length > 0 ||
-    potentialOption.length > 0 ||
-    additionalPotentialOption.length > 0 ||
-    statType.length > 0 ||
-    enchantedFlag;
+  // 카테고리별 선택된 값 가져오기
+  const getSelectedValues = (categoryId: string) => {
+    if (categoryId === "starForce") return starForce;
+    if (categoryId === "statType") return statType;
+    if (categoryId === "potentialOption") return potentialOption;
+    if (categoryId === "additionalPotentialOption")
+      return additionalPotentialOption;
+    return [];
+  };
 
+  // 노작 여부 변경 핸들러 (인챈트의 반대)
+  const handleNoEnchantChange = (checked: boolean) => {
+    handleEnchantedFlagChange(!checked);
+  };
   return (
     <div className="mini-search-container">
       <div className="mini-search-input-wrapper">
@@ -323,7 +330,11 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
           >
             <h4 className="text-sm font-medium text-white">옵션 선택</h4>
             <div style={{ marginLeft: "auto" }}>
-              {hasSelectedOptions && (
+              {(starForce.length > 0 ||
+                potentialOption.length > 0 ||
+                additionalPotentialOption.length > 0 ||
+                statType.length > 0 ||
+                enchantedFlag) && (
                 <button
                   onClick={resetOptions}
                   style={{
@@ -352,17 +363,40 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
           </div>
 
           <div className="mini-options-grid">
+            {/* 노작 여부 체크박스를 상단으로 이동 */}
+            <div className="mini-option-item mini-checkbox-container">
+              <input
+                type="checkbox"
+                id="mini-no-enchant-flag"
+                checked={!enchantedFlag}
+                onChange={(e) => {
+                  handleNoEnchantChange(e.target.checked);
+                }}
+                className="mini-checkbox-input"
+              />
+              <label
+                htmlFor="mini-no-enchant-flag"
+                className="mini-checkbox-label"
+              >
+                노작 여부
+              </label>
+            </div>
+
             <div className="mini-option-item">
               <label htmlFor="mini-star-force" className="mini-option-label">
                 스타포스
               </label>
               <CustomSelect
-                options={starForceOptions}
+                options={getOptionsForCategory("starForce")}
                 value={starForce}
-                onChange={handleStarForceChange}
+                onChange={(value) => {
+                  handleStarForceChange(value);
+                  if (Array.isArray(value) && value.length === 1) {
+                    selectAllSubOptions("starForce", value[0]);
+                  }
+                }}
                 placeholder="선택"
                 mini={true}
-                disabled={enchantedFlag}
                 multiple={true}
               />
             </div>
@@ -372,12 +406,21 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
                 스탯타입
               </label>
               <CustomSelect
-                options={statTypeOptions}
+                options={getOptionsForCategory("statType")}
                 value={statType}
-                onChange={handleStatTypeChange}
+                onChange={(value) => {
+                  handleStatTypeChange(value);
+                  if (
+                    Array.isArray(value) &&
+                    value.length === 1 &&
+                    activePath?.starForce
+                  ) {
+                    selectAllSubOptions("statType", value[0]);
+                  }
+                }}
                 placeholder="선택"
                 mini={true}
-                disabled={enchantedFlag}
+                disabled={starForce.length === 0}
                 multiple={true}
               />
             </div>
@@ -390,12 +433,22 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
                 잠재능력 %
               </label>
               <CustomSelect
-                options={potentialOptions}
+                options={getOptionsForCategory("potentialOption")}
                 value={potentialOption}
-                onChange={handlePotentialOptionChange}
+                onChange={(value) => {
+                  handlePotentialOptionChange(value);
+                  if (
+                    Array.isArray(value) &&
+                    value.length === 1 &&
+                    activePath?.starForce &&
+                    activePath?.statType
+                  ) {
+                    selectAllSubOptions("potentialOption", value[0]);
+                  }
+                }}
                 placeholder="선택"
                 mini={true}
-                disabled={enchantedFlag}
+                disabled={starForce.length === 0 || statType.length === 0}
                 multiple={true}
               />
             </div>
@@ -408,39 +461,96 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
                 에디셔널 잠재능력
               </label>
               <CustomSelect
-                options={additionalPotentialOptions}
+                options={getOptionsForCategory("additionalPotentialOption")}
                 value={additionalPotentialOption}
                 onChange={handleAdditionalPotentialOptionChange}
                 placeholder="선택"
                 mini={true}
-                disabled={enchantedFlag}
+                disabled={
+                  starForce.length === 0 ||
+                  statType.length === 0 ||
+                  potentialOption.length === 0
+                }
                 multiple={true}
               />
             </div>
+          </div>
 
-            <div className="mini-option-item mini-checkbox-container">
-              <input
-                type="checkbox"
-                id="mini-enchanted-flag"
-                checked={enchantedFlag}
-                onChange={(e) => {
-                  handleEnchantedFlagChange(e.target.checked);
-                }}
-                className="mini-checkbox-input"
-                disabled={!isEnchantedFlagAvailable()}
-              />
-              <label
-                htmlFor="mini-enchanted-flag"
-                className={`mini-checkbox-label ${
-                  !isEnchantedFlagAvailable() ? "opacity-50" : ""
-                }`}
-              >
-                노작 여부
-              </label>
-            </div>
+          <div className="mini-search-action">
+            <button
+              className={`mini-search-action-button ${
+                selectedOptionIds.length === 0 ? "opacity-70" : ""
+              } ${isSearching ? "searching" : ""}`}
+              onClick={handleSearch}
+              disabled={isSearching}
+              type="button"
+            >
+              {isSearching ? (
+                <>
+                  <div className="mini-spinner mr-1"></div>
+                  검색 중...
+                </>
+              ) : (
+                <>
+                  <Search className="mr-1 h-3 w-3" />
+                  {selectedOptionIds.length > 0
+                    ? `${selectedOptionIds.length}개 옵션으로 검색`
+                    : "검색"}
+                </>
+              )}
+            </button>
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        /* 노작 여부 토글 스위치 스타일 */
+        .mini-no-enchant-toggle-container {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.5rem 0.75rem;
+          background-color: rgba(26, 26, 46, 0.3);
+          border-radius: 0.375rem;
+          margin-bottom: 0.75rem;
+          border: 1px solid rgba(60, 27, 153, 0.3);
+        }
+
+        .mini-no-enchant-label {
+          font-weight: 500;
+          color: white;
+          font-size: 0.75rem;
+        }
+
+        .mini-toggle-switch {
+          position: relative;
+          width: 36px;
+          height: 20px;
+          background-color: #374151;
+          border-radius: 10px;
+          cursor: pointer;
+          transition: background-color 0.3s;
+        }
+
+        .mini-toggle-switch-on {
+          background-color: #8b5cf6;
+        }
+
+        .mini-toggle-switch-slider {
+          position: absolute;
+          top: 2px;
+          left: 2px;
+          width: 16px;
+          height: 16px;
+          background-color: white;
+          border-radius: 50%;
+          transition: transform 0.3s;
+        }
+
+        .mini-toggle-switch-on .mini-toggle-switch-slider {
+          transform: translateX(16px);
+        }
+      `}</style>
     </div>
   );
 }
