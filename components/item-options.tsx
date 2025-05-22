@@ -190,7 +190,7 @@ export function ItemOptions({
 
   // 노작 여부 토글 (인챈트 여부의 반대)
   const handleNoEnchantToggle = () => {
-    handleEnchantedFlagChange(!enchantedFlag);
+    handleEnchantedFlagChange(enchantedFlag);
   };
 
   // 옵션 미리보기 처리
