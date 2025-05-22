@@ -92,6 +92,7 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
     isEnchantedFlagAvailable,
     resetOptions,
     selectAllSubOptions,
+    notEnchantedItemId,
   } = useItemOptions(itemOptions);
 
   // 컴포넌트 마운트 시 현재 아이템명 설정
@@ -163,6 +164,19 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
       try {
         setIsSearching(true);
 
+        // 노작 여부가 ON이고 notEnchantedItemId가 있는 경우
+        if (!enchantedFlag && notEnchantedItemId !== undefined) {
+          // 노작 아이템 ID를 로컬 스토리지에 저장
+          localStorage.setItem(
+            `optionIds_${selectedItem}`,
+            JSON.stringify([notEnchantedItemId])
+          );
+
+          // 아이템 상세 페이지로 이동
+          router.push(`/item/${encodeURIComponent(selectedItem)}`);
+          return;
+        }
+
         // 선택된 옵션 ID가 있는 경우에만 검색 진행
         if (selectedOptionIds.length > 0) {
           // 선택된 옵션 ID를 로컬 스토리지에 저장
@@ -207,10 +221,11 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
     return [];
   };
 
-  // 노작 여부 변경 핸들러 (인챈트의 반대)
-  const handleNoEnchantChange = (checked: boolean) => {
-    handleEnchantedFlagChange(!checked);
+  // 노작 여부 토글 (인챈트 여부의 반대)
+  const handleNoEnchantToggle = () => {
+    handleEnchantedFlagChange(enchantedFlag);
   };
+
   return (
     <div className="mini-search-container">
       <div className="mini-search-input-wrapper">
@@ -362,26 +377,23 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
             </div>
           </div>
 
-          <div className="mini-options-grid">
-            {/* 노작 여부 체크박스를 상단으로 이동 */}
-            <div className="mini-option-item mini-checkbox-container">
-              <input
-                type="checkbox"
-                id="mini-no-enchant-flag"
-                checked={!enchantedFlag}
-                onChange={(e) => {
-                  handleNoEnchantChange(e.target.checked);
-                }}
-                className="mini-checkbox-input"
-              />
-              <label
-                htmlFor="mini-no-enchant-flag"
-                className="mini-checkbox-label"
+          <div
+            className={`mini-options-grid ${
+              enchantedFlag ? "mini-options-disabled" : ""
+            }`}
+          >
+            {/* 노작 여부 슬라이드 버튼 - 최상단에 별도로 배치 */}
+            <div className="mini-no-enchant-toggle-container">
+              <span className="mini-no-enchant-label">노작 여부</span>
+              <div
+                className={`mini-toggle-switch ${
+                  !enchantedFlag ? "mini-toggle-switch-on" : ""
+                }`}
+                onClick={handleNoEnchantToggle}
               >
-                노작 여부
-              </label>
+                <div className="mini-toggle-switch-slider"></div>
+              </div>
             </div>
-
             <div className="mini-option-item">
               <label htmlFor="mini-star-force" className="mini-option-label">
                 스타포스
@@ -549,6 +561,36 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
 
         .mini-toggle-switch-on .mini-toggle-switch-slider {
           transform: translateX(16px);
+        }
+
+        .mini-options-disabled {
+          opacity: 0.5;
+          pointer-events: none;
+          position: relative;
+        }
+
+        .mini-options-disabled::after {
+          content: "노작 아이템은 추가 옵션을 선택할 수 없습니다";
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background-color: rgba(76, 29, 149, 0.8);
+          color: white;
+          padding: 0.5rem 0.75rem;
+          border-radius: 0.375rem;
+          font-size: 0.75rem;
+          text-align: center;
+          white-space: nowrap;
+          z-index: 10;
+        }
+
+        @media (max-width: 480px) {
+          .mini-options-disabled::after {
+            white-space: normal;
+            width: 80%;
+            font-size: 0.7rem;
+          }
         }
       `}</style>
     </div>

@@ -306,7 +306,11 @@ export function ItemOptions({
         </div>
       </div>
 
-      <div className="horizontal-categories">
+      <div
+        className={`horizontal-categories ${
+          !enchantedFlag ? "categories-disabled" : ""
+        }`}
+      >
         {categories.map((category) => (
           <div
             key={category.id}
@@ -666,6 +670,35 @@ export function ItemOptions({
 
           .category-column {
             width: 100%;
+          }
+        }
+
+        .categories-disabled {
+          opacity: 0.5;
+          pointer-events: none;
+          position: relative;
+        }
+
+        .categories-disabled::after {
+          content: "노작 아이템은 추가 옵션을 선택할 수 없습니다";
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background-color: rgba(76, 29, 149, 0.8);
+          color: white;
+          padding: 0.75rem 1rem;
+          border-radius: 0.5rem;
+          font-size: 0.875rem;
+          text-align: center;
+          white-space: nowrap;
+          z-index: 10;
+        }
+
+        @media (max-width: 768px) {
+          .categories-disabled::after {
+            white-space: normal;
+            width: 80%;
           }
         }
       `}</style>

@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 // 타입 정의
 export type OptionCombination = {
   id: number;
-  starForce: string;
+  starForce: number;
   potentialOption: string;
   additionalPotentialOption: string;
   statType: string;
@@ -27,6 +27,7 @@ export type ItemOptionsData = {
     statType: string[];
   };
   categorizedOptions: Record<string, CategoryOption>;
+  notEnchantedItemId?: number; // 노작 아이템 ID 추가
 };
 
 export type Option = {
@@ -66,6 +67,9 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
   const [availableCombinations, setAvailableCombinations] = useState<
     OptionCombination[]
   >([]);
+  const [notEnchantedItemId, setNotEnchantedItemId] = useState<
+    number | undefined
+  >(undefined);
 
   // 현재 활성화된 카테고리 경로
   const [activePath, setActivePath] = useState<CategoryPath | null>(null);
@@ -79,6 +83,7 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
     setEnchantedFlag(false);
     setSelectedOptionIds([]);
     setActivePath(null);
+    setNotEnchantedItemId(itemOptionsData?.notEnchantedItemId);
 
     if (itemOptionsData?.combinations) {
       setAvailableCombinations(itemOptionsData.combinations);
@@ -87,9 +92,18 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
     }
   }, [itemOptionsData]);
 
-  // 선택된 옵션에 맞는 조합 찾기
+  // 선택된 옵션에 맞는 조��� 찾기
   const updateSelectedOptionIds = () => {
-    if (!itemOptionsData?.combinations) return;
+    if (!itemOptionsData) return;
+
+    // 노작 여부가 ON인 경우 (enchantedFlag가 false)
+    if (!enchantedFlag && itemOptionsData.notEnchantedItemId !== undefined) {
+      setSelectedOptionIds([itemOptionsData.notEnchantedItemId]);
+      return;
+    }
+
+    // 노작 여부가 OFF인 경우 (enchantedFlag가 true) - 기존 로직 유지
+    if (!itemOptionsData.combinations) return;
 
     // 선택된 옵션들
     const selectedOptions = {
@@ -133,7 +147,6 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
           );
         const statTypeMatch = selectedOptions.statType.includes(combo.statType);
         const enchantedMatch =
-          !selectedOptions.enchantedFlag ||
           combo.enchantedFlag === selectedOptions.enchantedFlag;
 
         return (
@@ -343,6 +356,16 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
 
   const handleEnchantedFlagChange = (checked: boolean) => {
     setEnchantedFlag(checked);
+
+    // 노작 여부가 ON(enchantedFlag가 false)이면 다른 옵션 초기화
+    if (!checked) {
+      setStarForce([]);
+      setPotentialOption([]);
+      setAdditionalPotentialOption([]);
+      setStatType([]);
+      setActivePath(null);
+    }
+
     setTimeout(() => updateSelectedOptionIds(), 0);
   };
 
@@ -507,6 +530,7 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
     }
   };
 
+  // 노작 여부 상태 반환 추가
   return {
     // 상태
     starForce,
@@ -517,6 +541,7 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
     selectedOptionIds,
     availableCombinations,
     activePath,
+    notEnchantedItemId,
 
     // 핸들러
     handleStarForceChange,
