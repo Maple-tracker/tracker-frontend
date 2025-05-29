@@ -90,6 +90,7 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
     setActivePathValue,
     getCategoryOptions,
     isEnchantedFlagAvailable,
+    getCurrentPath,
     resetOptions,
     selectAllSubOptions,
     notEnchantedItemId,
@@ -223,7 +224,7 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
 
   // 노작 여부 토글 (인챈트 여부의 반대)
   const handleNoEnchantToggle = () => {
-    handleEnchantedFlagChange(enchantedFlag);
+    handleEnchantedFlagChange(!enchantedFlag);
   };
 
   return (
@@ -421,7 +422,8 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
                 options={getOptionsForCategory("statType")}
                 value={statType}
                 onChange={(value) => {
-                  handleStatTypeChange(value);
+                  const currentPath = getCurrentPath("statType");
+                  handleStatTypeChange(value, currentPath);
                   if (
                     Array.isArray(value) &&
                     value.length === 1 &&
@@ -448,7 +450,8 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
                 options={getOptionsForCategory("potentialOption")}
                 value={potentialOption}
                 onChange={(value) => {
-                  handlePotentialOptionChange(value);
+                  const currentPath = getCurrentPath("potentialOption");
+                  handlePotentialOptionChange(value, currentPath);
                   if (
                     Array.isArray(value) &&
                     value.length === 1 &&
@@ -475,7 +478,12 @@ export function ItemSearchMini({ currentItemName }: ItemSearchMiniProps) {
               <CustomSelect
                 options={getOptionsForCategory("additionalPotentialOption")}
                 value={additionalPotentialOption}
-                onChange={handleAdditionalPotentialOptionChange}
+                onChange={(value) => {
+                  const currentPath = getCurrentPath(
+                    "additionalPotentialOption"
+                  );
+                  handleAdditionalPotentialOptionChange(value, currentPath);
+                }}
                 placeholder="선택"
                 mini={true}
                 disabled={

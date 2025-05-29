@@ -2022,3 +2022,63 @@ body {
 .option-text {
   color: #e0d5ff;
 }
+
+/* 노작 여부 토글 스위치 스타일 수정 */
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background-color: #374151;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.toggle-switch-on {
+  background-color: #8b5cf6;
+}
+
+.toggle-switch-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+.toggle-switch-on .toggle-switch-slider {
+  transform: translateX(20px);
+}
+
+/* 미니 토글 스위치 스타일 수정 */
+.mini-toggle-switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background-color: #374151;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.mini-toggle-switch-on {
+  background-color: #8b5cf6;
+}
+
+.mini-toggle-switch-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+.mini-toggle-switch-on .mini-toggle-switch-slider {
+  transform: translateX(16px);
+}

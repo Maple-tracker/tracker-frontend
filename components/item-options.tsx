@@ -11,7 +11,6 @@ type ItemOptionsProps = {
   isLoading: boolean;
   onOptionSelect: (optionIds: number[]) => void;
 };
-
 export function ItemOptions({
   isActive,
   itemName,
@@ -36,8 +35,12 @@ export function ItemOptions({
     getCategoryOptions,
     getOptionIdsForPath,
     isEnchantedFlagAvailable,
+    isOptionSelected,
+    getCurrentPath,
     resetOptions,
     selectAllSubOptions,
+    getSelectedValues,
+    selectedOptions,
   } = useItemOptions(availableOptions);
 
   // 펼쳐진 카테고리
@@ -79,103 +82,89 @@ export function ItemOptions({
 
   // 옵션 선택 처리
   const handleOptionSelect = (categoryId: string, value: string) => {
-    // 현재 선택된 값 배열
-    let currentValues: string[] = [];
-    let newPath: CategoryPath | null = null;
-
-    // 카테고리에 따라 현재 선택된 값 가져오기 및 새 경로 설정
-    if (categoryId === "starForce") {
-      currentValues = [...starForce];
-      newPath = { starForce: value };
-    } else if (categoryId === "statType") {
-      currentValues = [...statType];
-      newPath = activePath ? { ...activePath, statType: value } : null;
-    } else if (categoryId === "potentialOption") {
-      currentValues = [...potentialOption];
-      newPath = activePath ? { ...activePath, potentialOption: value } : null;
-    } else if (categoryId === "additionalPotentialOption") {
-      currentValues = [...additionalPotentialOption];
-      newPath = activePath
-        ? { ...activePath, additionalPotentialOption: value }
-        : null;
-    }
+    
+    const currentPath = getCurrentPath(categoryId);
 
     // 이미 선택된 값인지 확인
-    const isSelected = currentValues.includes(value);
+    const isSelected = isOptionSelected(categoryId, value, currentPath);
 
     // 선택/해제 처리
     if (isSelected) {
-      // 선택 해제: 현재 값 제거
-      const newValues = currentValues.filter((v) => v !== value);
-
-      // 카테고리에 따라 적절한 핸들러 호출
+      // 선택 해제: 현재 값과 하위 옵션 제거
       if (categoryId === "starForce") {
-        handleStarForceChange(newValues);
-        // 스타포스 해제 시 관련 하위 선택 초기화
-        if (newValues.length === 0) {
-          handleStatTypeChange([]);
-          handlePotentialOptionChange([]);
-          handleAdditionalPotentialOptionChange([]);
-        }
+        const currentStarForce = getSelectedValues("starForce");
+        handleStarForceChange(currentStarForce.filter((v) => v !== value));
       } else if (categoryId === "statType") {
-        handleStatTypeChange(newValues);
-        // 스탯타입 해제 시 관련 하위 선택 초기화
-        if (newValues.length === 0) {
-          handlePotentialOptionChange([]);
-          handleAdditionalPotentialOptionChange([]);
-        }
+        const currentStatType = getSelectedValues("statType", currentPath);
+        handleStatTypeChange(
+          currentStatType.filter((v) => v !== value),
+          currentPath
+        );
       } else if (categoryId === "potentialOption") {
-        handlePotentialOptionChange(newValues);
-        // 잠재능력 해제 시 관련 하위 선택 초기화
-        if (newValues.length === 0) {
-          handleAdditionalPotentialOptionChange([]);
-        }
+        const currentPotential = getSelectedValues(
+          "potentialOption",
+          currentPath
+        );
+        handlePotentialOptionChange(
+          currentPotential.filter((v) => v !== value),
+          currentPath
+        );
       } else if (categoryId === "additionalPotentialOption") {
-        handleAdditionalPotentialOptionChange(newValues);
-      }
-
-      // 활성 경로 업데이트 (해당 카테고리 이후 경로 제거)
-      if (categoryId === "starForce") {
-        setActivePathValue({ starForce: newValues[0] });
-      } else if (categoryId === "statType" && activePath) {
-        setActivePathValue({ starForce: activePath.starForce });
-      } else if (categoryId === "potentialOption" && activePath) {
-        setActivePathValue({
-          starForce: activePath.starForce,
-          statType: activePath.statType,
-        });
-      } else if (categoryId === "additionalPotentialOption" && activePath) {
-        setActivePathValue({
-          starForce: activePath.starForce,
-          statType: activePath.statType,
-          potentialOption: activePath.potentialOption,
-        });
+        const currentAdditional = getSelectedValues(
+          "additionalPotentialOption",
+          currentPath
+        );
+        handleAdditionalPotentialOptionChange(
+          currentAdditional.filter((v) => v !== value),
+          currentPath
+        );
       }
     } else {
-      // 선택: 현재 값에 추가
-      const newValues = [...currentValues, value];
-
-      // 카테고리에 따라 적절한 핸들러 호출
+      // 선택: 현재 값 추가
       if (categoryId === "starForce") {
-        handleStarForceChange(newValues);
+        const currentStarForce = getSelectedValues("starForce");
+        handleStarForceChange([...currentStarForce, value]);
         // 모든 하위 옵션 선택
         selectAllSubOptions("starForce", value);
       } else if (categoryId === "statType") {
-        handleStatTypeChange(newValues);
+        const currentStatType = getSelectedValues("statType", currentPath);
+        handleStatTypeChange([...currentStatType, value], currentPath);
         // 모든 하위 옵션 선택
         selectAllSubOptions("statType", value);
       } else if (categoryId === "potentialOption") {
-        handlePotentialOptionChange(newValues);
+        const currentPotential = getSelectedValues(
+          "potentialOption",
+          currentPath
+        );
+        handlePotentialOptionChange([...currentPotential, value], currentPath);
         // 모든 하위 옵션 선택
         selectAllSubOptions("potentialOption", value);
       } else if (categoryId === "additionalPotentialOption") {
-        handleAdditionalPotentialOptionChange(newValues);
-        // 모든 하위 옵션 선택
-        selectAllSubOptions("additionalPotentialOption", value);
+        const currentAdditional = getSelectedValues(
+          "additionalPotentialOption",
+          currentPath
+        );
+        handleAdditionalPotentialOptionChange(
+          [...currentAdditional, value],
+          currentPath
+        );
       }
+    }
 
-      // 활성 경로 업데이트
-      if (newPath) setActivePathValue(newPath);
+    // 경로 업데이트는 별도로 처리
+    let newPath: CategoryPath | null = null;
+    if (categoryId === "starForce") {
+      newPath = { starForce: value };
+    } else if (categoryId === "statType" && activePath) {
+      newPath = { ...activePath, statType: value };
+    } else if (categoryId === "potentialOption" && activePath) {
+      newPath = { ...activePath, potentialOption: value };
+    } else if (categoryId === "additionalPotentialOption" && activePath) {
+      newPath = { ...activePath, additionalPotentialOption: value };
+    }
+
+    if (newPath && !isSelected) {
+      setActivePathValue(newPath);
 
       // 다음 카테고리 자동 펼치기
       const category = categories.find((cat) => cat.id === categoryId);
@@ -190,7 +179,9 @@ export function ItemOptions({
 
   // 노작 여부 토글 (인챈트 여부의 반대)
   const handleNoEnchantToggle = () => {
-    handleEnchantedFlagChange(enchantedFlag);
+    // 노작 여부를 토글합니다.
+    // enchantedFlag가 true면 인챈트된 상태(노작 아님), false면 노작 상태입니다.
+    handleEnchantedFlagChange(!enchantedFlag);
   };
 
   // 옵션 미리보기 처리
@@ -239,20 +230,11 @@ export function ItemOptions({
     }
   };
 
-  // 카테고리별 선택된 값 가져오기
-  const getSelectedValues = (categoryId: string) => {
-    if (categoryId === "starForce") return starForce;
-    if (categoryId === "statType") return statType;
-    if (categoryId === "potentialOption") return potentialOption;
-    if (categoryId === "additionalPotentialOption")
-      return additionalPotentialOption;
-    return [];
-  };
-
   // 카테고리별 선택 개수 가져오기
   const getSelectionCount = (categoryId: string) => {
-    const values = getSelectedValues(categoryId);
-    return Array.isArray(values) ? values.length : values ? 1 : 0;
+    const currentPath = getCurrentPath(categoryId);
+    const values = getSelectedValues(categoryId, currentPath);
+    return values.length;
   };
 
   // 카테고리별 옵션 가져오기
@@ -338,67 +320,74 @@ export function ItemOptions({
               <div className="options-list">
                 {getOptionsForCategory(category.id).length > 0 ? (
                   // 일반 카테고리 옵션 처리
-                  getOptionsForCategory(category.id).map((option) => (
-                    <div key={option.value} className="option-row">
-                      <div
-                        className={`option-item ${
-                          getSelectedValues(category.id).includes(option.value)
-                            ? "selected"
-                            : ""
-                        }`}
-                      >
-                        <div
-                          className="option-checkbox"
-                          onClick={() =>
-                            handleOptionSelect(category.id, option.value)
-                          }
-                        >
-                          {getSelectedValues(category.id).includes(
-                            option.value
-                          ) && <Check className="check-icon" size={12} />}
-                        </div>
-                        <div
-                          className="option-content"
-                          onClick={() =>
-                            handleOptionSelect(category.id, option.value)
-                          }
-                        >
-                          <span className="option-label">{option.label}</span>
-                          {option.combinationInfo && (
-                            <span className="option-info">
-                              {option.combinationInfo}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                  getOptionsForCategory(category.id).map((option) => {
+                    const currentPath = getCurrentPath(category.id);
+                    const selected = isOptionSelected(
+                      category.id,
+                      option.value,
+                      currentPath
+                    );
 
-                      {/* Preview button */}
-                      {category.nextCategory && (
-                        <button
-                          className={`preview-button ${
-                            (activePath?.starForce === option.value &&
-                              category.id === "starForce") ||
-                            (activePath?.statType === option.value &&
-                              category.id === "statType") ||
-                            (activePath?.potentialOption === option.value &&
-                              category.id === "potentialOption") ||
-                            (activePath?.additionalPotentialOption ===
-                              option.value &&
-                              category.id === "additionalPotentialOption")
-                              ? "active"
-                              : ""
+                    return (
+                      <div key={option.value} className="option-row">
+                        <div
+                          className={`option-item ${
+                            selected ? "selected" : ""
                           }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePreview(category.id, option.value);
-                          }}
-                          title="하위 옵션 보기"
                         >
-                          <ChevronRight size={14} />
-                        </button>
-                      )}
-                    </div>
-                  ))
+                          <div
+                            className="option-checkbox"
+                            onClick={() =>
+                              handleOptionSelect(category.id, option.value)
+                            }
+                          >
+                            {selected && (
+                              <Check className="check-icon" size={12} />
+                            )}
+                          </div>
+                          <div
+                            className="option-content"
+                            onClick={() =>
+                              handleOptionSelect(category.id, option.value)
+                            }
+                          >
+                            <span className="option-label">{option.label}</span>
+                            {option.combinationInfo && (
+                              <span className="option-info">
+                                {option.combinationInfo}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Preview button */}
+                        {category.nextCategory && (
+                          <button
+                            className={`preview-button ${
+                              (activePath?.starForce === option.value &&
+                                category.id === "starForce") ||
+                              (activePath?.statType === option.value &&
+                                category.id === "statType") ||
+                              (activePath?.potentialOption === option.value &&
+                                category.id === "potentialOption") ||
+                              (activePath?.additionalPotentialOption ===
+                                option.value &&
+                                category.id === "additionalPotentialOption")
+                                ? "active"
+                                : ""
+                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePreview(category.id, option.value);
+                            }}
+                            title="하위 옵션 보기"
+                          >
+                            <ChevronRight size={14} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
                 ) : (
                   // 옵션이 없는 경우
                   <div className="no-options-message">

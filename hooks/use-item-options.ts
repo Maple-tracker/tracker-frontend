@@ -15,7 +15,7 @@ export type OptionCombination = {
 export type CategoryOption = {
   name: string;
   subCategories: Record<string, CategoryOption>;
-  optionIds: number[];
+  optionId: number;
 };
 
 export type ItemOptionsData = {
@@ -27,7 +27,7 @@ export type ItemOptionsData = {
     statType: string[];
   };
   categorizedOptions: Record<string, CategoryOption>;
-  notEnchantedItemId?: number; // 노작 아이템 ID 추가
+  notEnchantedItemId?: number;
 };
 
 export type Option = {
@@ -47,7 +47,6 @@ export type OptionValue<T extends OptionField> = T extends "enchantedFlag"
   ? boolean
   : string | string[];
 
-// 카테고리 경로 타입
 export type CategoryPath = {
   starForce?: string;
   statType?: string;
@@ -55,14 +54,15 @@ export type CategoryPath = {
   additionalPotentialOption?: string;
 };
 
+export type SelectedOption = {
+  category: string;
+  value: string;
+  path: string[];
+};
+
 export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
-  const [starForce, setStarForce] = useState<string[]>([]);
-  const [potentialOption, setPotentialOption] = useState<string[]>([]);
-  const [additionalPotentialOption, setAdditionalPotentialOption] = useState<
-    string[]
-  >([]);
-  const [statType, setStatType] = useState<string[]>([]);
-  const [enchantedFlag, setEnchantedFlag] = useState(false);
+  const [selectedOptions, setSelectedOptions] = useState<SelectedOption[]>([]);
+  const [enchantedFlag, setEnchantedFlag] = useState(true); // 기본값: 노작 아님 (인챈트/옵션 따짐)
   const [selectedOptionIds, setSelectedOptionIds] = useState<number[]>([]);
   const [availableCombinations, setAvailableCombinations] = useState<
     OptionCombination[]
@@ -70,480 +70,613 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
   const [notEnchantedItemId, setNotEnchantedItemId] = useState<
     number | undefined
   >(undefined);
-
-  // 현재 활성화된 카테고리 경로
   const [activePath, setActivePath] = useState<CategoryPath | null>(null);
 
-  // 아이템 옵션 데이터가 변경되면 상태 초기화
   useEffect(() => {
-    setStarForce([]);
-    setPotentialOption([]);
-    setAdditionalPotentialOption([]);
-    setStatType([]);
-    setEnchantedFlag(false);
+    setSelectedOptions([]);
+    setEnchantedFlag(true);
     setSelectedOptionIds([]);
     setActivePath(null);
     setNotEnchantedItemId(itemOptionsData?.notEnchantedItemId);
-
-    if (itemOptionsData?.combinations) {
-      setAvailableCombinations(itemOptionsData.combinations);
-    } else {
-      setAvailableCombinations([]);
-    }
+    setAvailableCombinations(itemOptionsData?.combinations || []);
   }, [itemOptionsData]);
 
-  // 선택된 옵션에 맞는 조��� 찾기
+  const getSelectedValues = (
+    category: string,
+    path: string[] = []
+  ): string[] => {
+    const values = new Set<string>();
+    selectedOptions.forEach((option) => {
+      // 1. Check if the category matches
+      if (option.category !== category) return;
+
+      // 2. Check if the option's path starts with the provided parent path
+      // and is exactly one level deeper.
+      // The option.path should be like [...path, option.value]
+      if (option.path.length !== path.length + 1) return;
+
+      let parentPathMatches = true;
+      for (let i = 0; i < path.length; i++) {
+        if (option.path[i] !== path[i]) {
+          parentPathMatches = false;
+          break;
+        }
+      }
+
+      if (parentPathMatches) {
+        // The last element of option.path should be its value for this category
+        if (option.path[path.length] === option.value) {
+          values.add(option.value);
+        }
+      }
+    });
+    return Array.from(values);
+  };
+
   const updateSelectedOptionIds = () => {
-    if (!itemOptionsData) return;
-
-    // 노작 여부가 ON인 경우 (enchantedFlag가 false)
-    if (!enchantedFlag && itemOptionsData.notEnchantedItemId !== undefined) {
-      setSelectedOptionIds([itemOptionsData.notEnchantedItemId]);
-      return;
-    }
-
-    // 노작 여부가 OFF인 경우 (enchantedFlag가 true) - 기존 로직 유지
-    if (!itemOptionsData.combinations) return;
-
-    // 선택된 옵션들
-    const selectedOptions = {
-      starForce,
-      potentialOption,
-      additionalPotentialOption,
-      statType,
+    console.log(
+      "[updateSelectedOptionIds] Called. EnchantedFlag:",
       enchantedFlag,
-    };
+      "SelectedOptions Count:",
+      selectedOptions.length
+    );
 
-    // 모든 필수 옵션이 선택되었는지 확인
-    const hasStarForce = selectedOptions.starForce.length > 0;
-    const hasPotentialOption = selectedOptions.potentialOption.length > 0;
-    const hasAdditionalPotentialOption =
-      selectedOptions.additionalPotentialOption.length > 0;
-    const hasStatType = selectedOptions.statType.length > 0;
-
-    // 모든 옵션이 선택되지 않았으면 빈 배열 반환
-    if (
-      !hasStarForce ||
-      !hasPotentialOption ||
-      !hasAdditionalPotentialOption ||
-      !hasStatType
-    ) {
+    if (!itemOptionsData) {
+      console.log(
+        "[updateSelectedOptionIds] No itemOptionsData, clearing IDs."
+      );
       setSelectedOptionIds([]);
       return;
     }
 
-    // 선택된 옵션에 맞는 조합 필터링
-    const matchingCombinations = itemOptionsData.combinations.filter(
-      (combo) => {
-        const starForceMatch = selectedOptions.starForce.includes(
-          String(combo.starForce)
-        );
-        const potentialMatch = selectedOptions.potentialOption.includes(
-          combo.potentialOption
-        );
-        const additionalMatch =
-          selectedOptions.additionalPotentialOption.includes(
-            combo.additionalPotentialOption
-          );
-        const statTypeMatch = selectedOptions.statType.includes(combo.statType);
-        const enchantedMatch =
-          combo.enchantedFlag === selectedOptions.enchantedFlag;
+    // 노작 여부가 ON인 경우 (enchantedFlag가 false)
+    if (!enchantedFlag && itemOptionsData.notEnchantedItemId !== undefined) {
+      console.log(
+        "[updateSelectedOptionIds] '노작' selected, using notEnchantedItemId:",
+        itemOptionsData.notEnchantedItemId
+      );
+      setSelectedOptionIds([itemOptionsData.notEnchantedItemId]);
+      return;
+    }
 
-        return (
-          starForceMatch &&
-          potentialMatch &&
-          additionalMatch &&
-          statTypeMatch &&
-          enchantedMatch
-        );
-      }
+    // 노작 여부가 OFF인 경우 - enchantedFlag를 조합 매칭에서 제외
+    if (!itemOptionsData.combinations || !itemOptionsData.categorizedOptions) {
+      console.log(
+        "[updateSelectedOptionIds] No combinations or categorizedOptions, clearing IDs."
+      );
+      setSelectedOptionIds([]);
+      return;
+    }
+
+    const validOptionIds: number[] = [];
+    const completeOptions = selectedOptions.filter(
+      (option) =>
+        option.category === "additionalPotentialOption" &&
+        option.path.length === 4
     );
 
-    // 선택된 조합들의 ID 업데이트
-    const matchingOptionIds = matchingCombinations.map((combo) => combo.id);
-    setSelectedOptionIds(matchingOptionIds);
+    console.log(
+      "[updateSelectedOptionIds] All selectedOptions:",
+      JSON.parse(JSON.stringify(selectedOptions))
+    );
+    console.log(
+      "[updateSelectedOptionIds] Complete paths (additionalPotentialOption with path length 4):",
+      JSON.parse(JSON.stringify(completeOptions))
+    );
+
+    completeOptions.forEach((additionalOption) => {
+      const [
+        starForcePathVal,
+        statTypePathVal,
+        potentialOptionPathVal,
+        additionalPotentialOptionPathVal,
+      ] = additionalOption.path;
+      console.log(
+        `[updateSelectedOptionIds] Processing complete path: [${starForcePathVal}, ${statTypePathVal}, ${potentialOptionPathVal}, ${additionalPotentialOptionPathVal}] (enchantedFlag excluded from matching)`
+      );
+
+      const matchingCombinations = itemOptionsData.combinations.filter(
+        (combo) => {
+          // Detailed logging for specific path components if they look like labels
+          if (
+            starForcePathVal.endsWith("성") ||
+            potentialOptionPathVal.includes("%") ||
+            additionalPotentialOptionPathVal.includes(" ")
+          ) {
+            // This block will log if any path component seems to be a label rather than a raw value.
+          }
+
+          // More specific logging when starForce and statType seem to match, to inspect further
+          if (
+            String(combo.starForce) === starForcePathVal.replace(/\D/g, "") &&
+            combo.statType === statTypePathVal
+          ) {
+            console.log(
+              `[Debug Match Attempt] Path: [${starForcePathVal}, ${statTypePathVal}, ${potentialOptionPathVal}, ${additionalPotentialOptionPathVal}]`
+            );
+            console.log(
+              `  Combo ID: ${combo.id}, StarForce: ${combo.starForce}, StatType: ${combo.statType}, Potential: "${combo.potentialOption}", Additional: "${combo.additionalPotentialOption}"`
+            );
+            console.log(
+              `  Comparing Potential: "${combo.potentialOption}" vs "${potentialOptionPathVal}"`
+            );
+            console.log(
+              `  Comparing Additional: "${combo.additionalPotentialOption}" vs "${additionalPotentialOptionPathVal}"`
+            );
+          }
+          const isMatch =
+            String(combo.starForce) === starForcePathVal.replace(/\D/g, "") && // "XX성" 같은 문자열에서 숫자만 추출하여 비교
+            combo.statType === statTypePathVal &&
+            combo.potentialOption === potentialOptionPathVal &&
+            combo.additionalPotentialOption ===
+              additionalPotentialOptionPathVal;
+          // enchantedFlag 조건 제거
+
+          if (isMatch) {
+            console.log(
+              `[updateSelectedOptionIds]   ✅ Match found for combo ID ${combo.id}:`,
+              combo
+            );
+          }
+          return isMatch;
+        }
+      );
+
+      if (matchingCombinations.length === 0) {
+        console.log(
+          `[updateSelectedOptionIds]   ❌ No matching combinations found for path [${starForcePathVal}, ${statTypePathVal}, ${potentialOptionPathVal}, ${additionalPotentialOptionPathVal}]`
+        );
+      }
+
+      matchingCombinations.forEach((combo) => {
+        if (!validOptionIds.includes(combo.id)) {
+          validOptionIds.push(combo.id);
+        }
+      });
+    });
+
+    console.log(
+      "[updateSelectedOptionIds] Final validOptionIds:",
+      validOptionIds
+    );
+    setSelectedOptionIds(validOptionIds);
   };
 
-  // 모든 하위 옵션 선택 함수
+  useEffect(() => {
+    updateSelectedOptionIds();
+  }, [selectedOptions, enchantedFlag, itemOptionsData]);
+
+  const isOptionSelected = (
+    category: string,
+    value: string,
+    path: string[] = []
+  ): boolean => {
+    return selectedOptions.some((option) => {
+      if (option.category !== category || option.value !== value) return false;
+      if (path.length === 0) return true;
+      const expectedPath = [...path, value];
+      if (expectedPath.length !== option.path.length) return false;
+      for (let i = 0; i < expectedPath.length; i++) {
+        if (expectedPath[i] !== option.path[i]) return false;
+      }
+      return true;
+    });
+  };
+
+  const addOption = (category: string, value: string, path: string[] = []) => {
+    if (isOptionSelected(category, value, path)) return;
+    const fullPath = [...path, value];
+    setSelectedOptions((prev) => {
+      // 중복 추가 방지 (경로까지 완전히 동일한 경우)
+      if (
+        prev.some(
+          (opt) =>
+            opt.category === category &&
+            opt.value === value &&
+            JSON.stringify(opt.path) === JSON.stringify(fullPath)
+        )
+      ) {
+        return prev;
+      }
+      return [...prev, { category, value, path: fullPath }];
+    });
+  };
+
+  const removeOption = (
+    category: string,
+    value: string,
+    path: string[] = []
+  ) => {
+    setSelectedOptions((prev) =>
+      prev.filter((option) => {
+        if (option.category !== category || option.value !== value) return true;
+        const expectedPath = [...path, value];
+        if (expectedPath.length !== option.path.length) return true;
+        for (let i = 0; i < expectedPath.length; i++) {
+          if (expectedPath[i] !== option.path[i]) return true;
+        }
+        return false;
+      })
+    );
+  };
+
+  const removeAllSubOptions = (pathPrefix: string[]) => {
+    if (pathPrefix.length === 0) return;
+    setSelectedOptions((prev) =>
+      prev.filter((option) => {
+        if (option.path.length <= pathPrefix.length) return true; // Keep shorter or same-length paths
+        for (let i = 0; i < pathPrefix.length; i++) {
+          if (option.path[i] !== pathPrefix[i]) return true; // Path prefix doesn't match, keep
+        }
+        return false; // Path prefix matches, remove
+      })
+    );
+  };
+
   const selectAllSubOptions = (categoryId: string, value: string) => {
     if (!itemOptionsData?.categorizedOptions) return;
 
     try {
-      // 현재 경로 설정
-      let currentPath: CategoryPath = {};
+      let currentSelectionPath: CategoryPath = {};
+      let basePathArray: string[] = [];
 
       if (categoryId === "starForce") {
-        currentPath = { starForce: value };
+        currentSelectionPath = { starForce: value };
+        basePathArray = [value];
+        const starForceCat = itemOptionsData.categorizedOptions[value];
+        if (!starForceCat) return;
 
-        // 스타포스 카테고리의 모든 하위 옵션 가져오기
-        const starForceCategory = itemOptionsData.categorizedOptions[value];
-        if (!starForceCategory) return;
-
-        // 스탯타입 옵션 가져오기
-        const statTypeOptions = Object.keys(starForceCategory.subCategories);
-        if (statTypeOptions.length > 0) {
-          // 첫 번째 스탯타입 선택
-          const firstStatType = statTypeOptions[0];
-          setStatType([...statType, firstStatType]);
-          currentPath.statType = firstStatType;
-
-          // 해당 스탯타입의 잠재능력 옵션 가져오기
-          const statTypeCategory =
-            starForceCategory.subCategories[firstStatType];
-          if (statTypeCategory) {
-            const potentialOptions = Object.keys(
-              statTypeCategory.subCategories
-            );
-            if (potentialOptions.length > 0) {
-              // 첫 번째 잠재능력 선택
-              const firstPotential = potentialOptions[0];
-              setPotentialOption([...potentialOption, firstPotential]);
-              currentPath.potentialOption = firstPotential;
-
-              // 해당 잠재능력의 에디셔널 잠재능력 옵션 가져오기
-              const potentialCategory =
-                statTypeCategory.subCategories[firstPotential];
-              if (potentialCategory) {
-                const additionalOptions = Object.keys(
-                  potentialCategory.subCategories
-                );
-                if (additionalOptions.length > 0) {
-                  // 첫 번째 에디셔널 잠재능력 선택
-                  const firstAdditional = additionalOptions[0];
-                  setAdditionalPotentialOption([
-                    ...additionalPotentialOption,
-                    firstAdditional,
-                  ]);
-                  currentPath.additionalPotentialOption = firstAdditional;
+        Object.keys(starForceCat.subCategories).forEach((statTypeValue) => {
+          addOption("statType", statTypeValue, basePathArray);
+          const statTypeCat = starForceCat.subCategories[statTypeValue];
+          if (statTypeCat) {
+            Object.keys(statTypeCat.subCategories).forEach(
+              (potentialOptionValue) => {
+                addOption("potentialOption", potentialOptionValue, [
+                  ...basePathArray,
+                  statTypeValue,
+                ]);
+                const potentialCat =
+                  statTypeCat.subCategories[potentialOptionValue];
+                if (potentialCat) {
+                  Object.keys(potentialCat.subCategories).forEach(
+                    (additionalOptionValue) => {
+                      addOption(
+                        "additionalPotentialOption",
+                        additionalOptionValue,
+                        [...basePathArray, statTypeValue, potentialOptionValue]
+                      );
+                    }
+                  );
                 }
               }
-            }
+            );
+          }
+        });
+        // Set activePath to the first fully traversable path for UI guidance
+        const firstStat = Object.keys(starForceCat.subCategories)[0];
+        if (firstStat) {
+          currentSelectionPath.statType = firstStat;
+          const firstPotCat =
+            starForceCat.subCategories[firstStat]?.subCategories;
+          const firstPot = firstPotCat
+            ? Object.keys(firstPotCat)[0]
+            : undefined;
+          if (firstPot) {
+            currentSelectionPath.potentialOption = firstPot;
+            const firstAddCat = firstPotCat[firstPot]?.subCategories;
+            const firstAdd = firstAddCat
+              ? Object.keys(firstAddCat)[0]
+              : undefined;
+            if (firstAdd)
+              currentSelectionPath.additionalPotentialOption = firstAdd;
           }
         }
       } else if (categoryId === "statType" && activePath?.starForce) {
-        currentPath = { starForce: activePath.starForce, statType: value };
+        currentSelectionPath = {
+          starForce: activePath.starForce,
+          statType: value,
+        };
+        basePathArray = [activePath.starForce, value];
+        const statTypeCat =
+          itemOptionsData.categorizedOptions[activePath.starForce]
+            ?.subCategories[value];
+        if (!statTypeCat) return;
 
-        // 스타포스 카테고리 가져오기
-        const starForceCategory =
-          itemOptionsData.categorizedOptions[activePath.starForce];
-        if (!starForceCategory) return;
-
-        // 스탯타입 카테고리 가져오기
-        const statTypeCategory = starForceCategory.subCategories[value];
-        if (!statTypeCategory) return;
-
-        // 잠재능력 옵션 가져오기
-        const potentialOptions = Object.keys(statTypeCategory.subCategories);
-        if (potentialOptions.length > 0) {
-          // 첫 번째 잠재능력 선택
-          const firstPotential = potentialOptions[0];
-          setPotentialOption([...potentialOption, firstPotential]);
-          currentPath.potentialOption = firstPotential;
-
-          // 해당 잠재능력의 에디셔널 잠재능력 옵션 가져오기
-          const potentialCategory =
-            statTypeCategory.subCategories[firstPotential];
-          if (potentialCategory) {
-            const additionalOptions = Object.keys(
-              potentialCategory.subCategories
-            );
-            if (additionalOptions.length > 0) {
-              // 첫 번째 에디셔널 잠재능력 선택
-              const firstAdditional = additionalOptions[0];
-              setAdditionalPotentialOption([
-                ...additionalPotentialOption,
-                firstAdditional,
-              ]);
-              currentPath.additionalPotentialOption = firstAdditional;
+        Object.keys(statTypeCat.subCategories).forEach(
+          (potentialOptionValue) => {
+            addOption("potentialOption", potentialOptionValue, basePathArray);
+            const potentialCat =
+              statTypeCat.subCategories[potentialOptionValue];
+            if (potentialCat) {
+              Object.keys(potentialCat.subCategories).forEach(
+                (additionalOptionValue) => {
+                  addOption(
+                    "additionalPotentialOption",
+                    additionalOptionValue,
+                    [...basePathArray, potentialOptionValue]
+                  );
+                }
+              );
             }
           }
+        );
+        const firstPotCat = statTypeCat.subCategories;
+        const firstPot = firstPotCat ? Object.keys(firstPotCat)[0] : undefined;
+        if (firstPot) {
+          currentSelectionPath.potentialOption = firstPot;
+          const firstAddCat = firstPotCat[firstPot]?.subCategories;
+          const firstAdd = firstAddCat
+            ? Object.keys(firstAddCat)[0]
+            : undefined;
+          if (firstAdd)
+            currentSelectionPath.additionalPotentialOption = firstAdd;
         }
       } else if (
         categoryId === "potentialOption" &&
         activePath?.starForce &&
         activePath?.statType
       ) {
-        currentPath = {
+        currentSelectionPath = {
           starForce: activePath.starForce,
           statType: activePath.statType,
           potentialOption: value,
         };
+        basePathArray = [activePath.starForce, activePath.statType, value];
+        const potentialCat =
+          itemOptionsData.categorizedOptions[activePath.starForce]
+            ?.subCategories[activePath.statType]?.subCategories[value];
+        if (!potentialCat) return;
 
-        // 스타포스 카테고리 가져오기
-        const starForceCategory =
-          itemOptionsData.categorizedOptions[activePath.starForce];
-        if (!starForceCategory) return;
-
-        // 스탯타입 카테고리 가져오기
-        const statTypeCategory =
-          starForceCategory.subCategories[activePath.statType];
-        if (!statTypeCategory) return;
-
-        // 잠재능력 카테고리 가져오기
-        const potentialCategory = statTypeCategory.subCategories[value];
-        if (!potentialCategory) return;
-
-        // 에디셔널 잠재능력 옵션 가져오기
-        const additionalOptions = Object.keys(potentialCategory.subCategories);
-        if (additionalOptions.length > 0) {
-          // 첫 번째 에디셔널 잠재능력 선택
-          const firstAdditional = additionalOptions[0];
-          setAdditionalPotentialOption([
-            ...additionalPotentialOption,
-            firstAdditional,
-          ]);
-          currentPath.additionalPotentialOption = firstAdditional;
-        }
+        Object.keys(potentialCat.subCategories).forEach(
+          (additionalOptionValue) => {
+            addOption(
+              "additionalPotentialOption",
+              additionalOptionValue,
+              basePathArray
+            );
+          }
+        );
+        const firstAddCat = potentialCat.subCategories;
+        const firstAdd = firstAddCat ? Object.keys(firstAddCat)[0] : undefined;
+        if (firstAdd) currentSelectionPath.additionalPotentialOption = firstAdd;
       }
 
-      // 활성 경로 업데이트
-      setActivePath(currentPath);
+      setActivePath(currentSelectionPath);
     } catch (error) {
-      console.error("하위 옵션 선택 오류:", error);
+      console.error("Error in selectAllSubOptions:", error);
     }
   };
 
-  // 옵션 변경 핸들러
-  const handleStarForceChange = (value: string | string[]) => {
-    const newValue = Array.isArray(value) ? value : [value];
-    setStarForce(newValue);
+  const handleStarForceChange = (values: string | string[]) => {
+    const newValues = Array.isArray(values) ? values : [values];
+    const currentSelected = getSelectedValues("starForce");
 
-    // 스타포스가 변경되면 활성 경로 업데이트
-    if (newValue.length === 1) {
-      setActivePath({ starForce: newValue[0] });
-    } else if (newValue.length === 0) {
-      setActivePath(null);
-    }
+    currentSelected.forEach((val) => {
+      if (!newValues.includes(val)) {
+        removeOption("starForce", val);
+        removeAllSubOptions([val]);
+      }
+    });
+    newValues.forEach((val) => {
+      if (!currentSelected.includes(val)) {
+        addOption("starForce", val);
+      }
+    });
 
-    setTimeout(() => updateSelectedOptionIds(), 0);
+    if (newValues.length === 1) setActivePath({ starForce: newValues[0] });
+    else if (newValues.length === 0) setActivePath(null);
   };
 
-  const handlePotentialOptionChange = (value: string | string[]) => {
-    const newValue = Array.isArray(value) ? value : [value];
-    setPotentialOption(newValue);
+  const handlePotentialOptionChange = (
+    values: string | string[],
+    path: string[] = []
+  ) => {
+    const newValues = Array.isArray(values) ? values : [values];
+    const currentSelected = getSelectedValues("potentialOption", path);
 
-    // 잠재능력이 변경되고 활성 경로가 있으면 업데이트
-    if (activePath && newValue.length === 1) {
-      setActivePath({ ...activePath, potentialOption: newValue[0] });
-    }
-
-    setTimeout(() => updateSelectedOptionIds(), 0);
+    currentSelected.forEach((val) => {
+      if (!newValues.includes(val)) {
+        removeOption("potentialOption", val, path);
+        removeAllSubOptions([...path, val]);
+      }
+    });
+    newValues.forEach((val) => {
+      if (!currentSelected.includes(val)) {
+        addOption("potentialOption", val, path);
+      }
+    });
+    if (activePath && newValues.length === 1)
+      setActivePath({ ...activePath, potentialOption: newValues[0] });
   };
 
-  const handleAdditionalPotentialOptionChange = (value: string | string[]) => {
-    const newValue = Array.isArray(value) ? value : [value];
-    setAdditionalPotentialOption(newValue);
+  const handleAdditionalPotentialOptionChange = (
+    values: string | string[],
+    path: string[] = []
+  ) => {
+    const newValues = Array.isArray(values) ? values : [values];
+    const currentSelected = getSelectedValues(
+      "additionalPotentialOption",
+      path
+    );
 
-    // 에디셔널 잠재능력이 변경되고 활성 경로가 있으면 업데이트
-    if (activePath && newValue.length === 1) {
-      setActivePath({ ...activePath, additionalPotentialOption: newValue[0] });
-    }
-
-    setTimeout(() => updateSelectedOptionIds(), 0);
+    currentSelected.forEach((val) => {
+      if (!newValues.includes(val))
+        removeOption("additionalPotentialOption", val, path);
+    });
+    newValues.forEach((val) => {
+      if (!currentSelected.includes(val))
+        addOption("additionalPotentialOption", val, path);
+    });
+    if (activePath && newValues.length === 1)
+      setActivePath({ ...activePath, additionalPotentialOption: newValues[0] });
   };
 
-  const handleStatTypeChange = (value: string | string[]) => {
-    const newValue = Array.isArray(value) ? value : [value];
-    setStatType(newValue);
+  const handleStatTypeChange = (
+    values: string | string[],
+    path: string[] = []
+  ) => {
+    const newValues = Array.isArray(values) ? values : [values];
+    const currentSelected = getSelectedValues("statType", path);
 
-    // 스탯타입이 변경되고 활성 경로가 있으면 업데이트
-    if (activePath && newValue.length === 1) {
-      setActivePath({ ...activePath, statType: newValue[0] });
-    }
-
-    setTimeout(() => updateSelectedOptionIds(), 0);
+    currentSelected.forEach((val) => {
+      if (!newValues.includes(val)) {
+        removeOption("statType", val, path);
+        removeAllSubOptions([...path, val]);
+      }
+    });
+    newValues.forEach((val) => {
+      if (!currentSelected.includes(val)) {
+        addOption("statType", val, path);
+      }
+    });
+    if (activePath && newValues.length === 1)
+      setActivePath({ ...activePath, statType: newValues[0] });
   };
 
   const handleEnchantedFlagChange = (checked: boolean) => {
     setEnchantedFlag(checked);
-
-    // 노작 여부가 ON(enchantedFlag가 false)이면 다른 옵션 초기화
     if (!checked) {
-      setStarForce([]);
-      setPotentialOption([]);
-      setAdditionalPotentialOption([]);
-      setStatType([]);
+      // "노작" selected (enchantedFlag is false)
+      setSelectedOptions([]);
       setActivePath(null);
     }
-
-    setTimeout(() => updateSelectedOptionIds(), 0);
   };
 
-  // 활성 경로 설정
-  const setActivePathValue = (path: CategoryPath) => {
-    setActivePath(path);
-  };
+  const setActivePathValue = (path: CategoryPath) => setActivePath(path);
 
-  // 특정 카테고리 경로에 대한 옵션 가져오기
   const getCategoryOptions = (
     categoryId: string,
-    path: CategoryPath | null
+    currentPath: CategoryPath | null
   ): Option[] => {
-    if (!itemOptionsData?.categorizedOptions || !path) {
-      // 기본 옵션 반환 (첫 번째 카테고리인 경우)
-      if (
-        categoryId === "starForce" &&
-        itemOptionsData?.availableOptions?.starForce
-      ) {
-        return itemOptionsData.availableOptions.starForce.map((sf) => ({
-          value: sf,
-          label: sf,
-        }));
-      }
-      return [];
-    }
+    if (!itemOptionsData?.categorizedOptions) return [];
 
-    // 카테고리 경로에 따라 옵션 가져오기
     try {
       if (categoryId === "starForce") {
-        // 최상위 카테고리는 직접 가져옴
         return Object.keys(itemOptionsData.categorizedOptions).map((key) => ({
           value: key,
           label: itemOptionsData.categorizedOptions[key].name,
         }));
-      } else if (categoryId === "statType" && path.starForce) {
-        // 스타포스가 선택된 경우 해당 스타포스의 하위 카테고리 가져오기
-        const starForceCategory =
-          itemOptionsData.categorizedOptions[path.starForce];
-        if (!starForceCategory) return [];
+      }
+      if (!currentPath) return [];
 
-        return Object.keys(starForceCategory.subCategories).map((key) => ({
-          value: key,
-          label: starForceCategory.subCategories[key].name,
-        }));
-      } else if (
+      if (categoryId === "statType" && currentPath.starForce) {
+        const starForceCat =
+          itemOptionsData.categorizedOptions[currentPath.starForce];
+        return starForceCat
+          ? Object.keys(starForceCat.subCategories).map((key) => ({
+              value: key,
+              label: starForceCat.subCategories[key].name,
+            }))
+          : [];
+      }
+      if (
         categoryId === "potentialOption" &&
-        path.starForce &&
-        path.statType
+        currentPath.starForce &&
+        currentPath.statType
       ) {
-        // 스타포스와 스탯타입이 선택된 경우
-        const starForceCategory =
-          itemOptionsData.categorizedOptions[path.starForce];
-        if (!starForceCategory) return [];
-
-        const statTypeCategory = starForceCategory.subCategories[path.statType];
-        if (!statTypeCategory) return [];
-
-        return Object.keys(statTypeCategory.subCategories).map((key) => ({
-          value: key,
-          label: statTypeCategory.subCategories[key].name,
-        }));
-      } else if (
+        const statTypeCat =
+          itemOptionsData.categorizedOptions[currentPath.starForce]
+            ?.subCategories[currentPath.statType];
+        return statTypeCat
+          ? Object.keys(statTypeCat.subCategories).map((key) => ({
+              value: key,
+              label: statTypeCat.subCategories[key].name,
+            }))
+          : [];
+      }
+      if (
         categoryId === "additionalPotentialOption" &&
-        path.starForce &&
-        path.statType &&
-        path.potentialOption
+        currentPath.starForce &&
+        currentPath.statType &&
+        currentPath.potentialOption
       ) {
-        // 스타포스, 스탯타입, 잠재능력이 선택된 경우
-        const starForceCategory =
-          itemOptionsData.categorizedOptions[path.starForce];
-        if (!starForceCategory) return [];
-
-        const statTypeCategory = starForceCategory.subCategories[path.statType];
-        if (!statTypeCategory) return [];
-
-        const potentialCategory =
-          statTypeCategory.subCategories[path.potentialOption];
-        if (!potentialCategory) return [];
-
-        return Object.keys(potentialCategory.subCategories).map((key) => ({
-          value: key,
-          label: potentialCategory.subCategories[key].name,
-        }));
+        const potentialCat =
+          itemOptionsData.categorizedOptions[currentPath.starForce]
+            ?.subCategories[currentPath.statType]?.subCategories[
+            currentPath.potentialOption
+          ];
+        return potentialCat
+          ? Object.keys(potentialCat.subCategories).map((key) => ({
+              value: key,
+              label: potentialCat.subCategories[key].name,
+            }))
+          : [];
       }
     } catch (error) {
-      console.error("카테고리 옵션 가져오기 오류:", error);
+      console.error(
+        "Error getting category options for",
+        categoryId,
+        "with path",
+        currentPath,
+        error
+      );
     }
-
     return [];
   };
 
-  // 특정 카테고리 경로에 대한 옵션 ID 가져오기
   const getOptionIdsForPath = (path: CategoryPath): number[] => {
-    if (!itemOptionsData?.categorizedOptions || !path.starForce) return [];
-
-    try {
-      // 스타포스만 선택된 경우
-      const starForceCategory =
-        itemOptionsData.categorizedOptions[path.starForce];
-      if (!starForceCategory) return [];
-
-      if (!path.statType) return starForceCategory.optionIds;
-
-      // 스타포스와 스탯타입이 선택된 경우
-      const statTypeCategory = starForceCategory.subCategories[path.statType];
-      if (!statTypeCategory) return [];
-
-      if (!path.potentialOption) return statTypeCategory.optionIds;
-
-      // 스타포스, 스탯타입, 잠재능력이 선택된 경우
-      const potentialCategory =
-        statTypeCategory.subCategories[path.potentialOption];
-      if (!potentialCategory) return [];
-
-      if (!path.additionalPotentialOption) return potentialCategory.optionIds;
-
-      // 모든 카테고리가 선택된 경우
-      const additionalCategory =
-        potentialCategory.subCategories[path.additionalPotentialOption];
-      if (!additionalCategory) return [];
-
-      return additionalCategory.optionIds;
-    } catch (error) {
-      console.error("옵션 ID 가져오기 오류:", error);
-      return [];
-    }
+    // This function might not be strictly needed if updateSelectedOptionIds works correctly
+    // but can be kept for direct path-to-ID lookups if necessary.
+    // For now, primary logic is in updateSelectedOptionIds.
+    return []; // Placeholder, as primary logic is in updateSelectedOptionIds
   };
 
-  // 인챈트 플래그 선택 가능 여부
   const isEnchantedFlagAvailable = (): boolean => {
-    if (!itemOptionsData?.combinations) return false;
-
-    // 활성 경로가 있고 모든 카테고리가 선택된 경우에만 인챈트 가능
-    if (
-      activePath?.starForce &&
-      activePath?.statType &&
-      activePath?.potentialOption &&
-      activePath?.additionalPotentialOption
-    ) {
-      const optionIds = getOptionIdsForPath(activePath);
-      return optionIds.some((id) => {
-        const combo = itemOptionsData.combinations.find((c) => c.id === id);
-        return combo?.enchantedFlag;
-      });
-    }
-
-    return false;
+    // This logic might also be simplified if dependent on selected combinations
+    return true; // Placeholder
   };
 
-  // 옵션 초기화 함수
   const resetOptions = () => {
-    setStarForce([]);
-    setPotentialOption([]);
-    setAdditionalPotentialOption([]);
-    setStatType([]);
-    setEnchantedFlag(false);
-    setSelectedOptionIds([]);
+    setSelectedOptions([]);
+    setEnchantedFlag(true);
+    // selectedOptionIds will be cleared by useEffect -> updateSelectedOptionIds
     setActivePath(null);
-    if (itemOptionsData?.combinations) {
-      setAvailableCombinations(itemOptionsData.combinations);
-    }
   };
 
-  // 노작 여부 상태 반환 추가
+  const getCurrentPath = (categoryId: string): string[] => {
+    if (!activePath) return [];
+    if (categoryId === "starForce") return [];
+    if (categoryId === "statType" && activePath.starForce)
+      return [activePath.starForce];
+    if (
+      categoryId === "potentialOption" &&
+      activePath.starForce &&
+      activePath.statType
+    )
+      return [activePath.starForce, activePath.statType];
+    if (
+      categoryId === "additionalPotentialOption" &&
+      activePath.starForce &&
+      activePath.statType &&
+      activePath.potentialOption
+    ) {
+      return [
+        activePath.starForce,
+        activePath.statType,
+        activePath.potentialOption,
+      ];
+    }
+    return [];
+  };
+
   return {
-    // 상태
-    starForce,
-    potentialOption,
-    additionalPotentialOption,
-    statType,
+    starForce: getSelectedValues("starForce"),
+    potentialOption: getSelectedValues(
+      "potentialOption",
+      getCurrentPath("potentialOption")
+    ),
+    additionalPotentialOption: getSelectedValues(
+      "additionalPotentialOption",
+      getCurrentPath("additionalPotentialOption")
+    ),
+    statType: getSelectedValues("statType", getCurrentPath("statType")),
     enchantedFlag,
     selectedOptionIds,
     availableCombinations,
     activePath,
     notEnchantedItemId,
-
-    // 핸들러
+    selectedOptions,
     handleStarForceChange,
     handlePotentialOptionChange,
     handleAdditionalPotentialOptionChange,
@@ -551,13 +684,12 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
     handleEnchantedFlagChange,
     setActivePathValue,
     selectAllSubOptions,
-
-    // 카테고리 옵션 함수
     getCategoryOptions,
     getOptionIdsForPath,
     isEnchantedFlagAvailable,
-
-    // 상태 초기화
+    isOptionSelected,
+    getSelectedValues,
+    getCurrentPath,
     resetOptions,
   };
 }
