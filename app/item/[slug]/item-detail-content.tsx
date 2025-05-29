@@ -20,7 +20,6 @@ export default function ItemDetailContent({
       <div className="item-page-header">
         <Link href="/" className="back-button">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          검색으로 돌아가기
         </Link>
 
         <ItemSearchMini currentItemName={itemData.item.name} />
@@ -40,44 +39,51 @@ export default function ItemDetailContent({
               />
             </div>
             <div>
-              <h1 className="item-title">{itemData.item.name}</h1>
+              <h1 className="item-title"> {itemData.item.name}</h1>
               <p className="item-update-time">
                 마지막 업데이트:{" "}
                 {new Date(itemData.priceStats.lastUpdated).toLocaleString()}
               </p>
 
-              {/* 옵션 태그 - 가로 나열 방식 (색상 구분 적용) */}
+              {/* 옵션 태그 - 세로 나열 방식 (스크롤 가능) */}
               <div className="mt-2">
                 {itemData.itemOptions && itemData.itemOptions.length > 0 ? (
-                  <div className="inline-itemOptions-container">
-                    {itemData.itemOptions.map((option, index) => (
-                      <div
-                        key={option.id || index}
-                        className="inline-option-set"
-                      >
-                        {itemData.itemOptions.length > 1 && (
-                          <span className="inline-option-number">
-                            옵션 {index + 1}
-                          </span>
-                        )}
-                        <div className="inline-tags-wrapper">
-                          <span className="inline-tag tag-starforce">
-                            {option.starForce}
-                          </span>
-                          <span className="inline-tag tag-potential">
-                            {option.potentialOption} {option.statType}
-                          </span>
-                          <span className="inline-tag tag-additional">
-                            {option.additionalPotentialOption}
-                          </span>
-                          {option.enchantedFlag && (
-                            <span className="inline-tag tag-enchant">
-                              인챈트
+                  <div className="options-scroll-container">
+                    <div className="options-scroll-header">
+                      <span className="options-count-text">
+                        검색 옵션 ({itemData.itemOptions.length}개)
+                      </span>
+                    </div>
+                    <div className="options-scroll-content">
+                      {itemData.itemOptions.map((option, index) => (
+                        <div
+                          key={option.id || index}
+                          className="inline-option-set"
+                        >
+                          {itemData.itemOptions.length > 1 && (
+                            <span className="inline-option-number">
+                              옵션 {index + 1}
                             </span>
                           )}
+                          <div className="inline-tags-wrapper">
+                            <span className="inline-tag tag-starforce">
+                              {option.starForce}
+                            </span>
+                            <span className="inline-tag tag-potential">
+                              {option.statType} {option.potentialOption}
+                            </span>
+                            <span className="inline-tag tag-additional">
+                              {option.additionalPotentialOption}
+                            </span>
+                            {option.enchantedFlag && (
+                              <span className="inline-tag tag-enchant">
+                                노작
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 ) : itemData.option ? (
                   <div className="inline-itemOptions-container">
@@ -87,14 +93,14 @@ export default function ItemDetailContent({
                           {itemData.option.starForce}
                         </span>
                         <span className="inline-tag tag-potential">
-                          {itemData.option.potentialOption}{" "}
-                          {itemData.option.statType}
+                          {itemData.option.statType}{" "}
+                          {itemData.option.potentialOption}
                         </span>
                         <span className="inline-tag tag-additional">
                           {itemData.option.additionalPotentialOption}
                         </span>
                         {itemData.option.enchantedFlag && (
-                          <span className="inline-tag tag-enchant">인챈트</span>
+                          <span className="inline-tag tag-enchant">노작</span>
                         )}
                       </div>
                     </div>
