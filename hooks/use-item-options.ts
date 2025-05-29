@@ -544,33 +544,34 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
   };
 
   const setActivePathValue = (path: CategoryPath) => setActivePath(path);
-
   const getCategoryOptions = (
     categoryId: string,
     currentPath: CategoryPath | null
   ): Option[] => {
     if (!itemOptionsData?.categorizedOptions) return [];
 
+    let options: Option[] = [];
+
     try {
       if (categoryId === "starForce") {
-        return Object.keys(itemOptionsData.categorizedOptions).map((key) => ({
-          value: key,
-          label: itemOptionsData.categorizedOptions[key].name,
-        }));
-      }
-      if (!currentPath) return [];
-
-      if (categoryId === "statType" && currentPath.starForce) {
+        options = Object.keys(itemOptionsData.categorizedOptions).map(
+          (key) => ({
+            value: key,
+            label: itemOptionsData.categorizedOptions[key].name,
+          })
+        );
+      } else if (!currentPath) {
+        return [];
+      } else if (categoryId === "statType" && currentPath.starForce) {
         const starForceCat =
           itemOptionsData.categorizedOptions[currentPath.starForce];
-        return starForceCat
+        options = starForceCat
           ? Object.keys(starForceCat.subCategories).map((key) => ({
               value: key,
               label: starForceCat.subCategories[key].name,
             }))
           : [];
-      }
-      if (
+      } else if (
         categoryId === "potentialOption" &&
         currentPath.starForce &&
         currentPath.statType
@@ -578,14 +579,13 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
         const statTypeCat =
           itemOptionsData.categorizedOptions[currentPath.starForce]
             ?.subCategories[currentPath.statType];
-        return statTypeCat
+        options = statTypeCat
           ? Object.keys(statTypeCat.subCategories).map((key) => ({
               value: key,
               label: statTypeCat.subCategories[key].name,
             }))
           : [];
-      }
-      if (
+      } else if (
         categoryId === "additionalPotentialOption" &&
         currentPath.starForce &&
         currentPath.statType &&
@@ -596,13 +596,16 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
             ?.subCategories[currentPath.statType]?.subCategories[
             currentPath.potentialOption
           ];
-        return potentialCat
+        options = potentialCat
           ? Object.keys(potentialCat.subCategories).map((key) => ({
               value: key,
               label: potentialCat.subCategories[key].name,
             }))
           : [];
       }
+
+      // 카테고리별 정렬 적용
+      return sortOptionsByCategory(options, categoryId);
     } catch (error) {
       console.error(
         "Error getting category options for",
@@ -613,6 +616,130 @@ export function useItemOptions(itemOptionsData: ItemOptionsData | null) {
       );
     }
     return [];
+  };
+
+  // 카테고리별 정렬 함수 추가
+  const sortOptionsByCategory = (
+    options: Option[],
+    categoryId: string
+  ): Option[] => {
+    switch (categoryId) {
+      case "starForce":
+        return sortStarForceOptions(options);
+      case "statType":
+        return sortStatTypeOptions(options);
+      case "potentialOption":
+        return sortPotentialOptions(options);
+      case "additionalPotentialOption":
+        return sortAdditionalPotentialOptions(options);
+      default:
+        return options;
+    }
+  };
+
+  // 스타포스 정렬: 숫자 오름차순
+  const sortStarForceOptions = (options: Option[]): Option[] => {
+    return options.sort((a, b) => {
+      const numA = Number.parseInt(a.value.replace(/\D/g, "")) || 0;
+      const numB = Number.parseInt(b.value.replace(/\D/g, "")) || 0;
+      return numA - numB;
+    });
+  };
+
+  // 스탯타입 정렬: STR, DEX, INT, LUK, HP, 올스탯 순
+  const sortStatTypeOptions = (options: Option[]): Option[] => {
+    const statOrder = ["STR", "DEX", "INT", "LUK", "HP", "올스탯"];
+
+    return options.sort((a, b) => {
+      const indexA = statOrder.indexOf(a.value);
+      const indexB = statOrder.indexOf(b.value);
+
+      // 정의된 순서에 없는 경우 맨 뒤로
+      if (indexA === -1 && indexB === -1) return a.value.localeCompare(b.value);
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+
+      return indexA - indexB;
+    });
+  };
+
+  // 잠재능력 정렬: 에픽, 유니크, 레전더리 순, 같은 등급 내에서는 % 오름차순
+  const sortPotentialOptions = (options: Option[]): Option[] => {
+    const gradeOrder = ["에픽", "유니크", "레전더리"];
+
+    return options.sort((a, b) => {
+      // 등급 추출 (옵션 이름에서 등급 정보 찾기)
+      const gradeA = getGradeFromOption(a.value) || getGradeFromOption(a.label);
+      const gradeB = getGradeFromOption(b.value) || getGradeFromOption(b.label);
+
+      const gradeIndexA = gradeOrder.indexOf(gradeA);
+      const gradeIndexB = gradeOrder.indexOf(gradeB);
+
+      // 등급이 다른 경우 등급 순서로 정렬
+      if (gradeIndexA !== gradeIndexB) {
+        if (gradeIndexA === -1 && gradeIndexB === -1) {
+          // 둘 다 등급이 없는 경우 퍼센티지로 정렬
+          return comparePercentage(a.value, b.value);
+        }
+        if (gradeIndexA === -1) return 1;
+        if (gradeIndexB === -1) return -1;
+        return gradeIndexA - gradeIndexB;
+      }
+
+      // 같은 등급인 경우 퍼센티지로 정렬
+      return comparePercentage(a.value, b.value);
+    });
+  };
+
+  // 에디셔널 잠재능력 정렬: 에픽, 유니크, 레전더리 순, 같은 등급 내에서는 숫자 오름차순
+  const sortAdditionalPotentialOptions = (options: Option[]): Option[] => {
+    const gradeOrder = ["에픽", "유니크", "레전더리"];
+
+    return options.sort((a, b) => {
+      // 등급 추출
+      const gradeA = getGradeFromOption(a.value) || getGradeFromOption(a.label);
+      const gradeB = getGradeFromOption(b.value) || getGradeFromOption(b.label);
+
+      const gradeIndexA = gradeOrder.indexOf(gradeA);
+      const gradeIndexB = gradeOrder.indexOf(gradeB);
+
+      // 등급이 다른 경우 등급 순서로 정렬
+      if (gradeIndexA !== gradeIndexB) {
+        if (gradeIndexA === -1 && gradeIndexB === -1) {
+          // 둘 다 등급이 없는 경우 숫자로 정렬
+          return compareNumeric(a.value, b.value);
+        }
+        if (gradeIndexA === -1) return 1;
+        if (gradeIndexB === -1) return -1;
+        return gradeIndexA - gradeIndexB;
+      }
+
+      // 같은 등급인 경우 숫자로 정렬
+      return compareNumeric(a.value, b.value);
+    });
+  };
+
+  // 옵션에서 등급 추출하는 헬퍼 함수
+  const getGradeFromOption = (optionText: string): string => {
+    if (optionText.includes("에픽")) return "에픽";
+    if (optionText.includes("유니크")) return "유니크";
+    if (optionText.includes("레전더리") || optionText.includes("레전드리"))
+      return "레전더리";
+    return "";
+  };
+
+  // 퍼센티지 비교 헬퍼 함수
+  const comparePercentage = (a: string, b: string): number => {
+    const percentA = Number.parseFloat(a.replace(/[^\d.]/g, "")) || 0;
+    const percentB = Number.parseFloat(b.replace(/[^\d.]/g, "")) || 0;
+    return percentA - percentB;
+  };
+
+  // 숫자 비교 헬퍼 함수
+  const compareNumeric = (a: string, b: string): number => {
+    const numA = Number.parseFloat(a.replace(/[^\d.]/g, "")) || 0;
+    const numB = Number.parseFloat(b.replace(/[^\d.]/g, "")) || 0;
+    return numA - numB;
   };
 
   const getOptionIdsForPath = (path: CategoryPath): number[] => {
